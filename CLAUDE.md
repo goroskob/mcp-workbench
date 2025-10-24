@@ -26,6 +26,54 @@ npm run dev
 npm run clean
 ```
 
+## Release Workflow
+
+This project uses automated GitHub Actions for releases and npm publishing.
+
+### Creating a New Release
+
+1. **Update the version** in [package.json](package.json):
+   ```bash
+   # For a patch release (0.2.0 -> 0.2.1)
+   npm version patch
+
+   # For a minor release (0.2.0 -> 0.3.0)
+   npm version minor
+
+   # For a major release (0.2.0 -> 1.0.0)
+   npm version major
+   ```
+   This creates a git commit and tag automatically.
+
+2. **Push the tag** to trigger the release workflow:
+   ```bash
+   git push origin main --tags
+   ```
+
+3. **Automated workflow** (defined in [.github/workflows/release.yml](.github/workflows/release.yml)):
+   - Builds the project (`npm run build`)
+   - Creates a GitHub release with auto-generated release notes
+   - Uploads distribution artifacts (tar.gz archive)
+   - **Publishes to npm** automatically using `NPM_TOKEN` secret
+
+### Setup Requirements
+
+For automated npm publishing to work, the repository must have:
+- **NPM_TOKEN** secret configured in GitHub repository settings
+- Token should be an "Automation" type token from https://www.npmjs.com/settings/tokens
+
+### CI/CD Workflows
+
+- **[.github/workflows/build.yml](.github/workflows/build.yml)** - Runs on every push/PR to main/develop
+  - Tests build on Node.js 18, 20, 22
+  - Verifies TypeScript compilation
+  - Validates build output
+
+- **[.github/workflows/release.yml](.github/workflows/release.yml)** - Runs on version tags (v*)
+  - Creates GitHub release
+  - Publishes to npm registry
+  - Uploads distribution archives
+
 ## Architecture Overview
 
 ### Request Flow
