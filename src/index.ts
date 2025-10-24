@@ -43,7 +43,7 @@ const UseToolInputSchema = z
     tool_name: z
       .string()
       .min(1)
-      .describe("Original name of the tool to execute (not prefixed)"),
+      .describe("Server-prefixed tool name (e.g., 'clickhouse-wsw1_run_select_query')"),
     arguments: z
       .record(z.any())
       .describe("Arguments to pass to the tool")
@@ -243,7 +243,7 @@ Opening a toolbox:
 4. Returns complete tool list with full schemas
 
 The tool list includes complete schemas and metadata for each tool.
-Use workbench_use_tool to execute tools by their original names.
+Use workbench_use_tool to execute tools by their server-prefixed names.
 
 If the toolbox is already open, returns the cached information.
 
@@ -258,10 +258,10 @@ Returns:
     "servers_connected": number,    // Number of MCP servers connected
     "tools": [
       {
-        "name": string,             // Tool identifier
+        "name": string,             // Server-prefixed tool name (e.g., "clickhouse-wsw1_run_select_query")
         "source_server": string,    // Which MCP server provides this
         "toolbox_name": string,     // Toolbox this tool belongs to
-        "description": string,      // What the tool does
+        "description": string,      // What the tool does (prefixed with [server])
         "inputSchema": object,      // JSON schema for parameters
         "annotations": object       // Tool hints (readOnly, etc.)
       }
@@ -484,7 +484,7 @@ How it works:
 
 Args:
   - toolbox_name: Name of an opened toolbox
-  - tool_name: Original tool name (not prefixed, e.g., 'read_file' not 'filesystem_read_file')
+  - tool_name: Server-prefixed tool name (e.g., 'clickhouse-wsw1_run_select_query') as shown in workbench_open_toolbox response
   - arguments: Tool arguments as a JSON object (optional)
 
 Returns:

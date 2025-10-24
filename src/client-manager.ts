@@ -174,6 +174,7 @@ export class ClientManager {
   /**
    * Get full tool list with schemas from connections
    * Used for proxy mode to return complete tool information
+   * Tools are prefixed with server name to avoid conflicts (matching dynamic mode)
    */
   private getToolsFromConnections(
     toolboxName: string,
@@ -183,10 +184,23 @@ export class ClientManager {
 
     for (const [serverName, connection] of connections) {
       for (const tool of connection.tools) {
+        // Apply same prefix as dynamic mode (line 211)
+        const prefixedName = `${serverName}_${tool.name}`;
+
         tools.push({
           ...tool,
+          name: prefixedName,  // Prefixed name
+          description: tool.description
+            ? `[${serverName}] ${tool.description}`
+            : `Tool from ${serverName} server`,
           source_server: serverName,
           toolbox_name: toolboxName,
+          _meta: {
+            ...tool._meta,
+            source_server: serverName,
+            toolbox_name: toolboxName,
+            original_name: tool.name,  // Store original for reference
+          },
         });
       }
     }
@@ -339,7 +353,7 @@ export class ClientManager {
   }
 
   /**
-   * Find a tool in an opened toolbox by its original name
+   * Find a tool in an opened toolbox by its name (with or without server prefix)
    * Returns the connection and tool, or throws an error if not found
    */
   findToolInToolbox(toolboxName: string, toolName: string): { connection: ServerConnection; tool: Tool } {
@@ -348,7 +362,25 @@ export class ClientManager {
       throw new Error(`Toolbox '${toolboxName}' is not currently open. Please open it first with workbench_open_toolbox.`);
     }
 
-    // Search all connections for a tool with this name
+    // Parse server prefix: format is {serverName}_{originalToolName}
+    const underscoreIndex = toolName.indexOf('_');
+
+    if (underscoreIndex > 0) {
+      const potentialServer = toolName.substring(0, underscoreIndex);
+      const connection = toolbox.connections.get(potentialServer);
+
+      if (connection) {
+        // Extract original tool name (everything after first underscore)
+        const originalToolName = toolName.substring(underscoreIndex + 1);
+        const tool = connection.tools.find(t => t.name === originalToolName);
+
+        if (tool) {
+          return { connection, tool };
+        }
+      }
+    }
+
+    // Fallback: search all connections with original name (backward compatibility)
     for (const connection of toolbox.connections.values()) {
       const tool = connection.tools.find(t => t.name === toolName);
       if (tool) {
@@ -356,10 +388,10 @@ export class ClientManager {
       }
     }
 
-    // Tool not found - provide helpful error message
+    // Tool not found - provide helpful error message with prefixed names
     const availableTools: string[] = [];
-    for (const connection of toolbox.connections.values()) {
-      availableTools.push(...connection.tools.map(t => t.name));
+    for (const [serverName, connection] of toolbox.connections) {
+      availableTools.push(...connection.tools.map(t => `${serverName}_${t.name}`));
     }
 
     throw new Error(
