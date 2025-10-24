@@ -9,6 +9,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
 import { loadConfig } from "./config-loader.js";
 import { ClientManager } from "./client-manager.js";
 import { WorkbenchConfig, ToolboxSummary, OpenToolboxResult } from "./types.js";
@@ -113,7 +114,7 @@ Examples:
   - Use when: You want to see what toolboxes are available
   - Use when: You need to find the right toolbox for a task
   - Use when: You want to check if a toolbox is already open`,
-        inputSchema: ListToolboxesInputSchema as any,
+        inputSchema: zodToJsonSchema(ListToolboxesInputSchema) as any,
         annotations: {
           readOnlyHint: true,
           destructiveHint: false,
@@ -221,7 +222,7 @@ Error Handling:
   - Returns error if toolbox name doesn't exist
   - Returns error if MCP servers fail to connect
   - Provides connection details in error messages`,
-        inputSchema: OpenToolboxInputSchema as any,
+        inputSchema: zodToJsonSchema(OpenToolboxInputSchema) as any,
         annotations: {
           readOnlyHint: false,
           destructiveHint: false,
@@ -316,7 +317,7 @@ Error Handling:
   - Returns error if toolbox is not currently open
   - Returns error if disconnection fails
   - Attempts to disconnect all servers even if some fail`,
-        inputSchema: CloseToolboxInputSchema as any,
+        inputSchema: zodToJsonSchema(CloseToolboxInputSchema) as any,
         annotations: {
           readOnlyHint: false,
           destructiveHint: false,
@@ -390,7 +391,7 @@ Error Handling:
   - Returns error if arguments don't match tool's schema
   - Returns error from the underlying tool if it fails
   - Provides clear guidance on which toolbox/tool failed`,
-        inputSchema: UseToolInputSchema as any,
+        inputSchema: zodToJsonSchema(UseToolInputSchema) as any,
         annotations: {
           readOnlyHint: false,
           destructiveHint: false,
