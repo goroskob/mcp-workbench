@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-MCP Workbench is a **meta-MCP server** that aggregates tools from other MCP servers and organizes them into "toolboxes" for dynamic discovery and invocation. It acts as a proxy/orchestrator that connects to downstream MCP servers and exposes their tools through a unified interface.
+MCP Workbench is a **meta-MCP server** that aggregates tools from other MCP servers and organizes them into "toolboxes" for dynamic discovery and invocation. It acts as an orchestrator that connects to downstream MCP servers and **dynamically registers** their tools on the workbench server with prefixed names.
 
 ## Build and Development Commands
 
@@ -30,24 +30,35 @@ npm run clean
 
 ### Request Flow
 ```
-MCP Client → Workbench Server → Client Manager → Downstream MCP Server(s)
+MCP Client → Workbench Server (calls registered tool) → Client Manager → Downstream MCP Server(s)
 ```
 
-The workbench acts as both an **MCP server** (exposes 4 meta-tools) and an **MCP client** (connects to downstream servers).
+The workbench acts as both an **MCP server** (exposes 3 meta-tools + dynamically registered downstream tools) and an **MCP client** (connects to downstream servers).
+
+### Dynamic Tool Registration
+When a toolbox is opened, downstream tools are **dynamically registered** on the workbench server with prefixed names (`{server}_{tool}`). This means:
+- Tools appear natively in the MCP client's tool list
+- No proxy layer needed - tools are called directly by name
+- Better IDE integration and discoverability
 
 ### Core Components
 
 **src/index.ts** - Main MCP server
-- Implements the 4 workbench tools: `list_toolboxes`, `open_toolbox`, `close_toolbox`, `use_tool`
+- Implements 3 workbench meta-tools: `list_toolboxes`, `open_toolbox`, `close_toolbox`
 - Manages server lifecycle (initialization, cleanup on SIGINT/SIGTERM)
 - Loads configuration via `config-loader.ts`
+- Sends `tool list changed` notifications when toolboxes open/close
 
-**src/client-manager.ts** - MCP client connection pool
+**src/client-manager.ts** - MCP client connection pool and tool registry
 - Opens/closes connections to downstream MCP servers as MCP clients
 - Queries `tools/list` from each server during toolbox open
-- Proxies `tools/call` to the appropriate server based on tool name
-- Maintains runtime state of opened toolboxes with their connections
-- Key method: `connectToServer()` creates `StdioClientTransport` for each downstream server
+- **Dynamically registers** downstream tools on the workbench server with prefixed names
+- **Delegates** tool calls to appropriate downstream server via registered handlers
+- Maintains runtime state of opened toolboxes with their connections and registered tools
+- Key methods:
+  - `connectToServer()` creates `StdioClientTransport` for each downstream server
+  - `registerToolsOnServer()` registers downstream tools with `{server}_{tool}` prefix
+  - `unregisterToolsFromServer()` removes tools when toolbox closes
 
 **src/config-loader.ts** - Configuration validator
 - Loads `workbench-config.json` (path from `WORKBENCH_CONFIG` env var)
@@ -57,15 +68,29 @@ The workbench acts as both an **MCP server** (exposes 4 meta-tools) and an **MCP
 **src/types.ts** - TypeScript type system
 - `WorkbenchConfig`, `ToolboxConfig`, `McpServerConfig`, `WorkbenchServerConfig` define configuration schema
 - `ServerConnection` tracks MCP client instances, transports, and cached tools
-- `OpenedToolbox` represents runtime state of active connections
+- `OpenedToolbox` represents runtime state with connections and `registeredTools` map
 - `ToolInfo` extends MCP SDK's `Tool` type with `source_server` and `toolbox_name` metadata
+- `OpenToolboxResult` now includes `tools_registered` count instead of full tool list
 
-### The 4 Workbench Tools
+### The 3 Workbench Meta-Tools
 
 1. **workbench_list_toolboxes** - Lists configured toolboxes (read-only, no connections made)
-2. **workbench_open_toolbox** - Connects to all MCP servers in a toolbox, queries their tools, returns merged tool list
-3. **workbench_use_tool** - Forwards tool invocation to the appropriate downstream server
-4. **workbench_close_toolbox** - Disconnects all servers in a toolbox
+2. **workbench_open_toolbox** - Connects to all MCP servers in a toolbox, dynamically registers their tools with prefixed names, sends tool list changed notification
+3. **workbench_close_toolbox** - Unregisters tools, disconnects all servers in a toolbox, sends tool list changed notification
+
+### Tool Naming Convention
+
+When a toolbox is opened, downstream tools are registered with the format: `{server}_{tool_name}`
+
+**Example:**
+- Server name: `filesystem`
+- Original tool: `read_file`
+- Registered as: `filesystem_read_file`
+
+This prefixing strategy:
+- Avoids name conflicts between servers
+- Makes tool origin clear
+- Provides consistent, predictable naming
 
 ## Configuration Format
 
@@ -109,11 +134,24 @@ Connections are **not** created at server startup. They're created when `workben
 - Resources freed by closing unused toolboxes
 - Fresh tool discovery on each open
 
-### Tool Proxying
-`workbench_use_tool` does NOT re-expose downstream tools as native workbench tools. Instead:
-1. Finds which server provides the tool (from cached tool list)
-2. Calls `client.callTool()` on that server's MCP client
-3. Returns the response directly (preserves original behavior)
+### Dynamic Tool Registration
+When `workbench_open_toolbox` is called:
+1. Connects to all downstream MCP servers
+2. Queries `tools/list` from each server
+3. Registers each tool on workbench server with prefixed name
+4. Creates handler that delegates to downstream server via `client.callTool()`
+5. Sends `tool list changed` notification to MCP clients
+
+When a registered tool is called:
+1. MCP client calls tool by prefixed name (e.g., `filesystem_read_file`)
+2. Workbench handler extracts original tool name from metadata
+3. Delegates to downstream server: `client.callTool({ name: "read_file", arguments })`
+4. Returns downstream response directly
+
+When `workbench_close_toolbox` is called:
+1. Calls `.remove()` on each registered tool
+2. Disconnects from downstream servers
+3. Sends `tool list changed` notification
 
 ### Error Handling Pattern
 - **Configuration errors**: Fail fast at startup with clear messages
@@ -144,17 +182,19 @@ Recommended test servers (no auth required):
 2. Modify `ClientManager.connectToServer()` to handle new transport type
 3. Import appropriate transport from `@modelcontextprotocol/sdk/client/*`
 
-### Adding New Workbench Tools
+### Adding New Workbench Meta-Tools
 1. Define Zod schema in `src/index.ts` for input validation
 2. Register tool with `server.registerTool()` in `registerTools()` method
 3. Use `this.clientManager` to access opened toolboxes
 4. Follow handler signature: `async (args: { [x: string]: any }) => ...`
 
-### Handling Tool Name Conflicts
-Currently, if two servers expose the same tool name, the first one found is used. To implement prefixing:
-1. Modify `ClientManager.openToolbox()` to prefix tool names with server name
-2. Update `ClientManager.callTool()` to strip prefix before forwarding
-3. Document the prefixing strategy in tool metadata
+### Tool Name Conflicts
+Tool names are **always prefixed** with server name (`{server}_{tool}`) to ensure:
+- No conflicts between servers
+- Predictable, consistent naming
+- Clear tool origin
+
+If you need different behavior, modify `ClientManager.registerToolsOnServer()` in [src/client-manager.ts](src/client-manager.ts:152).
 
 ## TypeScript Notes
 

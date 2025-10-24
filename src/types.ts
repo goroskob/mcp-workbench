@@ -3,6 +3,7 @@
  */
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 /**
  * Standard MCP server configuration (matching Claude Desktop schema)
@@ -73,7 +74,8 @@ export interface OpenToolboxResult {
   toolbox: string;
   description: string;
   servers_connected: number;
-  tools: ToolInfo[];
+  tools_registered: number;
+  message: string;
 }
 
 /**
@@ -100,5 +102,7 @@ export interface OpenedToolbox {
   name: string;
   config: ToolboxConfig;
   connections: Map<string, ServerConnection>;
+  /** Registered tools on the workbench server for this toolbox */
+  registeredTools: Map<string, RegisteredTool>;
   opened_at: Date;
 }

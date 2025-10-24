@@ -5,6 +5,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WorkbenchServerConfig, ServerConnection, OpenedToolbox, ToolboxConfig, ToolInfo } from "./types.js";
 
 /**
@@ -93,36 +94,27 @@ export class ClientManager {
   }
 
   /**
-   * Open a toolbox by connecting to all its MCP servers
+   * Open a toolbox by connecting to all its MCP servers and registering tools
    */
   async openToolbox(
     toolboxName: string,
-    toolboxConfig: ToolboxConfig
-  ): Promise<{ connections: Map<string, ServerConnection>; tools: ToolInfo[] }> {
+    toolboxConfig: ToolboxConfig,
+    mcpServer: McpServer
+  ): Promise<{ connections: Map<string, ServerConnection>; toolsRegistered: number }> {
     // Check if already open
     if (this.openedToolboxes.has(toolboxName)) {
       const existing = this.openedToolboxes.get(toolboxName)!;
-      const tools = this.getToolsFromConnections(toolboxName, existing.connections);
-      return { connections: existing.connections, tools };
+      const toolsRegistered = existing.registeredTools.size;
+      return { connections: existing.connections, toolsRegistered };
     }
 
     const connections = new Map<string, ServerConnection>();
-    const tools: ToolInfo[] = [];
 
     // Connect to each server
     for (const [serverName, serverConfig] of Object.entries(toolboxConfig.mcpServers)) {
       try {
         const connection = await this.connectToServer(serverName, serverConfig);
         connections.set(serverName, connection);
-
-        // Add tools with metadata
-        for (const tool of connection.tools) {
-          tools.push({
-            ...tool,
-            source_server: serverName,
-            toolbox_name: toolboxName,
-          });
-        }
       } catch (error) {
         // Cleanup any successful connections before throwing
         for (const conn of connections.values()) {
@@ -134,35 +126,106 @@ export class ClientManager {
       }
     }
 
+    // Register tools on the workbench server
+    const registeredTools = await this.registerToolsOnServer(
+      mcpServer,
+      toolboxName,
+      connections
+    );
+
     // Store opened toolbox
     this.openedToolboxes.set(toolboxName, {
       name: toolboxName,
       config: toolboxConfig,
       connections,
+      registeredTools,
       opened_at: new Date(),
     });
 
-    return { connections, tools };
+    return { connections, toolsRegistered: registeredTools.size };
   }
 
   /**
-   * Get tools from a set of connections
+   * Register all downstream tools on the workbench server
+   * Tools are prefixed with server name to avoid conflicts
    */
-  private getToolsFromConnections(
+  private async registerToolsOnServer(
+    mcpServer: McpServer,
     toolboxName: string,
     connections: Map<string, ServerConnection>
-  ): ToolInfo[] {
-    const tools: ToolInfo[] = [];
+  ): Promise<Map<string, any>> {
+    const registeredTools = new Map<string, any>();
+
     for (const [serverName, connection] of connections) {
       for (const tool of connection.tools) {
-        tools.push({
-          ...tool,
-          source_server: serverName,
-          toolbox_name: toolboxName,
-        });
+        // Prefix tool name with server name to avoid conflicts
+        const prefixedName = `${serverName}_${tool.name}`;
+
+        // Register tool on workbench server with a handler that delegates to downstream
+        const registeredTool = mcpServer.registerTool(
+          prefixedName,
+          {
+            title: tool.title,
+            description: tool.description
+              ? `[${serverName}] ${tool.description}`
+              : `Tool from ${serverName} server`,
+            inputSchema: tool.inputSchema as any,
+            annotations: tool.annotations,
+            _meta: {
+              ...tool._meta,
+              source_server: serverName,
+              toolbox_name: toolboxName,
+              original_name: tool.name,
+            },
+          },
+          async (args: any) => {
+            // Delegate to the downstream server
+            try {
+              const result = await connection.client.callTool({
+                name: tool.name, // Use original name for downstream call
+                arguments: args,
+              });
+              return result;
+            } catch (error) {
+              return {
+                content: [
+                  {
+                    type: "text" as const,
+                    text: `Error calling tool '${tool.name}' on server '${serverName}': ${
+                      error instanceof Error ? error.message : String(error)
+                    }`,
+                  },
+                ],
+                isError: true,
+              };
+            }
+          }
+        );
+
+        registeredTools.set(prefixedName, registeredTool);
       }
     }
-    return tools;
+
+    return registeredTools;
+  }
+
+  /**
+   * Unregister all tools for a toolbox from the workbench server
+   */
+  private unregisterToolsFromServer(toolboxName: string): void {
+    const toolbox = this.openedToolboxes.get(toolboxName);
+    if (!toolbox) {
+      return;
+    }
+
+    // Remove all registered tools
+    for (const registeredTool of toolbox.registeredTools.values()) {
+      try {
+        registeredTool.remove();
+      } catch (error) {
+        console.error(`Error removing tool:`, error);
+      }
+    }
   }
 
   /**
@@ -173,6 +236,9 @@ export class ClientManager {
     if (!toolbox) {
       throw new Error(`Toolbox '${toolboxName}' is not currently open`);
     }
+
+    // Unregister all tools first
+    this.unregisterToolsFromServer(toolboxName);
 
     // Disconnect from all servers
     const errors: Error[] = [];
@@ -201,59 +267,6 @@ export class ClientManager {
     }
   }
 
-  /**
-   * Call a tool from an opened toolbox
-   */
-  async callTool(
-    toolboxName: string,
-    toolName: string,
-    args: Record<string, unknown>
-  ): Promise<any> {
-    const toolbox = this.openedToolboxes.get(toolboxName);
-    if (!toolbox) {
-      throw new Error(
-        `Toolbox '${toolboxName}' is not open. Please open it first with workbench_open_toolbox.`
-      );
-    }
-
-    // Find the tool and its server
-    let foundServer: ServerConnection | undefined;
-    let foundTool: Tool | undefined;
-
-    for (const connection of toolbox.connections.values()) {
-      const tool = connection.tools.find((t) => t.name === toolName);
-      if (tool) {
-        foundTool = tool;
-        foundServer = connection;
-        break;
-      }
-    }
-
-    if (!foundServer || !foundTool) {
-      const availableTools = Array.from(toolbox.connections.values())
-        .flatMap((conn) => conn.tools.map((t) => t.name))
-        .join(", ");
-      throw new Error(
-        `Tool '${toolName}' not found in toolbox '${toolboxName}'. Available tools: ${availableTools}`
-      );
-    }
-
-    // Call the tool on the remote server
-    try {
-      const result = await foundServer.client.callTool({
-        name: toolName,
-        arguments: args,
-      });
-
-      return result;
-    } catch (error) {
-      throw new Error(
-        `Error calling tool '${toolName}' on server '${foundServer.name}': ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-  }
 
   /**
    * Get list of opened toolboxes

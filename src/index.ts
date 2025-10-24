@@ -34,27 +34,10 @@ const CloseToolboxInputSchema = z
   })
   .strict();
 
-const UseToolInputSchema = z
-  .object({
-    toolbox_name: z
-      .string()
-      .min(1)
-      .describe("Name of the toolbox containing the tool"),
-    tool_name: z
-      .string()
-      .min(1)
-      .describe("Name of the tool to execute"),
-    arguments: z
-      .record(z.unknown())
-      .describe("Arguments to pass to the tool"),
-  })
-  .strict();
-
 // Type inference
 type ListToolboxesInput = z.infer<typeof ListToolboxesInputSchema>;
 type OpenToolboxInput = z.infer<typeof OpenToolboxInputSchema>;
 type CloseToolboxInput = z.infer<typeof CloseToolboxInputSchema>;
-type UseToolInput = z.infer<typeof UseToolInputSchema>;
 
 /**
  * Main server class
@@ -69,7 +52,7 @@ class WorkbenchServer {
     this.clientManager = new ClientManager();
     this.server = new McpServer({
       name: "mcp-workbench",
-      version: "0.1.2",
+      version: "0.2.0",
     });
 
     this.registerTools();
@@ -179,19 +162,23 @@ Examples:
       "workbench_open_toolbox",
       {
         title: "Open a Toolbox",
-        description: `Open a toolbox and discover its available tools.
+        description: `Open a toolbox and register its tools on the workbench server.
 
-This tool connects to all MCP servers configured in the specified toolbox
-and retrieves their tool definitions. Once opened, you can use the tools
-via workbench_use_tool.
+This tool connects to all MCP servers configured in the specified toolbox,
+retrieves their tools, and dynamically registers them on the workbench server.
+Once opened, tools can be called directly by their prefixed names.
 
 Opening a toolbox:
 1. Connects to each MCP server in the toolbox
 2. Retrieves the list of available tools from each server
 3. Applies any tool filters specified in the configuration
-4. Returns complete tool definitions including schemas
+4. Dynamically registers tools with prefix: {server}_{tool_name}
+5. Sends tool list changed notification to clients
 
-If the toolbox is already open, returns the cached tool list.
+Tools are prefixed with their server name to avoid conflicts. For example,
+a tool named "read_file" from server "filesystem" becomes "filesystem_read_file".
+
+If the toolbox is already open, returns the cached information.
 
 Args:
   - toolbox_name: Name of the toolbox to open (from workbench_list_toolboxes)
@@ -202,15 +189,8 @@ Returns:
     "toolbox": string,              // Toolbox name
     "description": string,          // Purpose description
     "servers_connected": number,    // Number of MCP servers connected
-    "tools": [
-      {
-        "name": string,             // Tool identifier
-        "source_server": string,    // Which MCP server provides this
-        "description": string,      // What the tool does
-        "inputSchema": object,      // Zod/JSON schema for parameters
-        "annotations": object       // Tool hints (readOnly, etc.)
-      }
-    ]
+    "tools_registered": number,     // Number of tools registered
+    "message": string               // Success message
   }
 
 Examples:
@@ -247,17 +227,22 @@ Error Handling:
             };
           }
 
-          // Open the toolbox (connects to servers)
-          const { connections, tools } = await this.clientManager.openToolbox(
+          // Open the toolbox (connects to servers and registers tools)
+          const { connections, toolsRegistered } = await this.clientManager.openToolbox(
             params.toolbox_name,
-            toolboxConfig
+            toolboxConfig,
+            this.server
           );
+
+          // Notify clients that tool list has changed
+          this.server.sendToolListChanged();
 
           const result: OpenToolboxResult = {
             toolbox: params.toolbox_name,
             description: toolboxConfig.description,
             servers_connected: connections.size,
-            tools,
+            tools_registered: toolsRegistered,
+            message: `Successfully opened toolbox '${params.toolbox_name}' and registered ${toolsRegistered} tools. Tools are now available with server-prefixed names (e.g., {server}_{tool}).`,
           };
 
           return {
@@ -330,11 +315,14 @@ Error Handling:
         try {
           await this.clientManager.closeToolbox(params.toolbox_name);
 
+          // Notify clients that tool list has changed
+          this.server.sendToolListChanged();
+
           return {
             content: [
               {
                 type: "text" as const,
-                text: `Successfully closed toolbox '${params.toolbox_name}' and disconnected from all servers.`,
+                text: `Successfully closed toolbox '${params.toolbox_name}', unregistered tools, and disconnected from all servers.`,
               },
             ],
           };
@@ -344,78 +332,6 @@ Error Handling:
               {
                 type: "text" as const,
                 text: `Error closing toolbox '${params.toolbox_name}': ${
-                  error instanceof Error ? error.message : String(error)
-                }`,
-              },
-            ],
-            isError: true,
-          };
-        }
-      }
-    );
-
-    // Tool 4: Use a tool from a toolbox
-    this.server.registerTool(
-      "workbench_use_tool",
-      {
-        title: "Execute a Tool from Toolbox",
-        description: `Execute a tool from an opened toolbox with specified arguments.
-
-This is the primary tool invocation mechanism. It proxies the tool call
-to the appropriate MCP server and returns the result.
-
-Prerequisites:
-1. The toolbox must be opened first (use workbench_open_toolbox)
-2. You must know the tool name (from the open toolbox response)
-3. You must provide arguments matching the tool's inputSchema
-
-The tool call is forwarded to the MCP server that provides the tool,
-and the result is returned directly.
-
-Args:
-  - toolbox_name: Name of the opened toolbox containing the tool
-  - tool_name: Name of the tool to execute
-  - arguments: Object containing tool parameters (must match tool's inputSchema)
-
-Returns:
-  The tool's response is returned directly (format depends on the tool)
-
-Examples:
-  - Use when: Executing any tool from an opened toolbox
-  - After: Opening a toolbox with workbench_open_toolbox
-  - With: Arguments that match the tool's inputSchema
-
-Error Handling:
-  - Returns error if toolbox is not open
-  - Returns error if tool doesn't exist in toolbox
-  - Returns error if arguments don't match tool's schema
-  - Returns error from the underlying tool if it fails
-  - Provides clear guidance on which toolbox/tool failed`,
-        inputSchema: UseToolInputSchema.shape,
-        annotations: {
-          readOnlyHint: false,
-          destructiveHint: false,
-          idempotentHint: false,
-          openWorldHint: true,
-        },
-      },
-      async (args: { [x: string]: any }) => {
-        const params = args as UseToolInput;
-        try {
-          const result = await this.clientManager.callTool(
-            params.toolbox_name,
-            params.tool_name,
-            params.arguments
-          );
-
-          // Return the tool result directly
-          return result;
-        } catch (error) {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: `Error executing tool: ${
                   error instanceof Error ? error.message : String(error)
                 }`,
               },
