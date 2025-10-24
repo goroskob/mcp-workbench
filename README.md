@@ -13,10 +13,30 @@ Instead of managing connections to multiple MCP servers manually, MCP Workbench 
 
 ## Installation
 
-### Option 1: Install Globally from GitHub
+### Option 1: No Installation Required (Use with npx)
+
+You can use `npx` to run mcp-workbench directly without any installation:
+
+```json
+{
+  "mcpServers": {
+    "mcp-workbench": {
+      "command": "npx",
+      "args": ["-y", "mcp-workbench"],
+      "env": {
+        "WORKBENCH_CONFIG": "/absolute/path/to/workbench-config.json"
+      }
+    }
+  }
+}
+```
+
+The `-y` flag tells npx to automatically install without prompting. The first run will download and cache the package, subsequent runs will use the cached version.
+
+### Option 2: Install Globally from npm
 
 ```bash
-npm install -g github:hlibkoval/mcp-workbench#v0.0.2
+npm install -g mcp-workbench
 ```
 
 Then use in your MCP client config:
@@ -34,7 +54,7 @@ Then use in your MCP client config:
 }
 ```
 
-### Option 2: Clone and Build Locally
+### Option 3: Clone and Build Locally
 
 ```bash
 git clone https://github.com/hlibkoval/mcp-workbench.git
@@ -126,7 +146,23 @@ Add to your configuration file:
 - **Claude Desktop (Linux)**: `~/.config/Claude/claude_desktop_config.json`
 - **Claude Code**: `~/.claude.json`
 
-**If installed globally:**
+**Using npx (recommended - no manual installation):**
+
+```json
+{
+  "mcpServers": {
+    "mcp-workbench": {
+      "command": "npx",
+      "args": ["-y", "mcp-workbench"],
+      "env": {
+        "WORKBENCH_CONFIG": "/Users/yourname/.config/mcp-workbench/workbench-config.json"
+      }
+    }
+  }
+}
+```
+
+**Or if installed globally:**
 
 ```json
 {
@@ -141,7 +177,7 @@ Add to your configuration file:
 }
 ```
 
-**If using local clone:**
+**Or if using local clone:**
 
 ```json
 {
@@ -158,8 +194,8 @@ Add to your configuration file:
 ```
 
 **Important**:
-- Use absolute paths for both the script and `WORKBENCH_CONFIG`, not relative paths
-- Replace `/Users/yourname/` and `/absolute/path/to/` with your actual paths
+- Use absolute paths for `WORKBENCH_CONFIG`, not relative paths
+- Replace `/Users/yourname/` with your actual home directory
 - Make sure you've created your `workbench-config.json` file first (see Configuration section)
 - After updating the configuration, restart Claude Desktop or Claude Code
 
