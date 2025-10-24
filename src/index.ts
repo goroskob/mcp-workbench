@@ -69,7 +69,7 @@ class WorkbenchServer {
     this.clientManager = new ClientManager();
     this.server = new McpServer({
       name: "mcp-workbench",
-      version: "0.1.1",
+      version: "0.1.2",
     });
 
     this.registerTools();
@@ -408,35 +408,14 @@ Error Handling:
             params.arguments
           );
 
-          // Prepend tool context to help Claude Desktop generate better summaries
-          const toolContext = `[${params.toolbox_name}:${params.tool_name}]`;
-
-          // Clone the result and prepend context to the first text content
-          if (result.content && result.content.length > 0) {
-            const enhancedContent = result.content.map((item: any, index: number) => {
-              if (index === 0 && item.type === "text") {
-                return {
-                  ...item,
-                  text: `${toolContext} ${item.text}`,
-                };
-              }
-              return item;
-            });
-
-            return {
-              ...result,
-              content: enhancedContent,
-            };
-          }
-
-          // If no content or unexpected format, return as-is
+          // Return the tool result directly
           return result;
         } catch (error) {
           return {
             content: [
               {
                 type: "text" as const,
-                text: `[${params.toolbox_name}:${params.tool_name}] Error executing tool: ${
+                text: `Error executing tool: ${
                   error instanceof Error ? error.message : String(error)
                 }`,
               },
