@@ -110,20 +110,30 @@ export class ClientManager {
 
     const connections = new Map<string, ServerConnection>();
 
-    // Connect to each server
-    for (const [serverName, serverConfig] of Object.entries(toolboxConfig.mcpServers)) {
-      try {
-        const connection = await this.connectToServer(serverName, serverConfig);
+    try {
+      // Connect to all servers in parallel
+      const serverEntries = Object.entries(toolboxConfig.mcpServers);
+      const connectionPromises = serverEntries.map(([serverName, serverConfig]) =>
+        this.connectToServer(serverName, serverConfig).then(connection => ({
+          serverName,
+          connection
+        }))
+      );
+
+      const results = await Promise.all(connectionPromises);
+
+      // Build connections map from results
+      for (const { serverName, connection } of results) {
         connections.set(serverName, connection);
-      } catch (error) {
-        // Cleanup any successful connections before throwing
-        for (const conn of connections.values()) {
-          try {
-            await conn.client.close();
-          } catch {}
-        }
-        throw error;
       }
+    } catch (error) {
+      // Cleanup any successful connections before throwing
+      for (const conn of connections.values()) {
+        try {
+          await conn.client.close();
+        } catch {}
+      }
+      throw error;
     }
 
     // Register tools on the workbench server
