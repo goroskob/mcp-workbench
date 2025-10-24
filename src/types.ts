@@ -5,20 +5,24 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 /**
- * Configuration for a single MCP server connection
+ * Standard MCP server configuration (matching Claude Desktop schema)
  */
 export interface McpServerConfig {
-  /** Unique identifier for this server instance */
-  name: string;
   /** Command to execute the MCP server */
   command: string;
   /** Arguments to pass to the command */
   args?: string[];
   /** Environment variables for the server process */
   env?: Record<string, string>;
+}
+
+/**
+ * Extended MCP server configuration with workbench-specific options
+ */
+export interface WorkbenchServerConfig extends McpServerConfig {
   /** Tool filters: array of tool names to include, or ["*"] for all tools */
-  tool_filters?: string[];
-  /** Transport type: stdio, http, or sse */
+  toolFilters?: string[];
+  /** Transport type: stdio, http, or sse (default: stdio) */
   transport?: "stdio" | "http" | "sse";
   /** Base URL for http/sse transports */
   url?: string;
@@ -30,8 +34,8 @@ export interface McpServerConfig {
 export interface ToolboxConfig {
   /** Human-readable description of the toolbox purpose */
   description: string;
-  /** MCP servers that provide tools for this toolbox */
-  mcp_servers: McpServerConfig[];
+  /** MCP servers that provide tools for this toolbox (standard MCP schema) */
+  mcpServers: Record<string, WorkbenchServerConfig>;
 }
 
 /**
@@ -76,7 +80,9 @@ export interface OpenToolboxResult {
  * Connection state for an MCP server
  */
 export interface ServerConnection {
-  config: McpServerConfig;
+  /** Unique identifier for this server instance */
+  name: string;
+  config: WorkbenchServerConfig;
   /** The MCP client instance */
   client: any; // Client from SDK
   /** Transport instance */

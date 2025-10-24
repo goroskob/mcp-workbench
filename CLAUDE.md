@@ -52,10 +52,10 @@ The workbench acts as both an **MCP server** (exposes 4 meta-tools) and an **MCP
 **src/config-loader.ts** - Configuration validator
 - Loads `workbench-config.json` (path from `WORKBENCH_CONFIG` env var)
 - Validates toolbox structure at startup
-- Each toolbox contains array of `mcp_servers` configurations
+- Each toolbox contains an `mcpServers` object using standard MCP schema
 
 **src/types.ts** - TypeScript type system
-- `WorkbenchConfig`, `ToolboxConfig`, `McpServerConfig` define configuration schema
+- `WorkbenchConfig`, `ToolboxConfig`, `McpServerConfig`, `WorkbenchServerConfig` define configuration schema
 - `ServerConnection` tracks MCP client instances, transports, and cached tools
 - `OpenedToolbox` represents runtime state of active connections
 - `ToolInfo` extends MCP SDK's `Tool` type with `source_server` and `toolbox_name` metadata
@@ -76,25 +76,30 @@ The server requires a `workbench-config.json` file with this structure:
   "toolboxes": {
     "toolbox-name": {
       "description": "Purpose of this toolbox",
-      "mcp_servers": [
-        {
-          "name": "unique-id",
+      "mcpServers": {
+        "server-name": {
           "command": "node",
           "args": ["path/to/server.js"],
           "env": { "API_KEY": "value" },
-          "tool_filters": ["*"],  // or ["tool1", "tool2"]
-          "transport": "stdio"    // only stdio supported currently
+          "toolFilters": ["*"],  // or ["tool1", "tool2"]
+          "transport": "stdio"   // optional, defaults to stdio
         }
-      ]
+      }
     }
   }
 }
 ```
 
+**Configuration Schema Notes:**
 - **toolbox_name**: Used as identifier in tool calls
-- **mcp_servers**: Each becomes an MCP client connection when toolbox opens
-- **tool_filters**: `["*"]` = all tools, or specify exact tool names
-- **transport**: Currently only `"stdio"` is implemented (HTTP/SSE planned)
+- **mcpServers**: Uses the **standard MCP configuration schema** (compatible with Claude Desktop/.claude.json)
+  - Keys are server names (unique identifiers)
+  - Values follow the standard MCP server config: `command`, `args`, `env`
+- **Workbench-specific extensions**:
+  - **toolFilters**: `["*"]` = all tools, or specify exact tool names to include
+  - **transport**: Currently only `"stdio"` is implemented (HTTP/SSE planned)
+
+The `mcpServers` format matches the standard used by Claude Desktop and other MCP clients, making it easy to copy server configurations between tools.
 
 ## Key Design Patterns
 
@@ -135,7 +140,7 @@ Recommended test servers (no auth required):
 ## Common Modifications
 
 ### Adding Support for New Transport Types
-1. Update `McpServerConfig` type in `src/types.ts` to include new transport options
+1. Update `WorkbenchServerConfig` type in `src/types.ts` to include new transport options
 2. Modify `ClientManager.connectToServer()` to handle new transport type
 3. Import appropriate transport from `@modelcontextprotocol/sdk/client/*`
 

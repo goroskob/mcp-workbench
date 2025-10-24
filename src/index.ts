@@ -128,9 +128,10 @@ Examples:
 
           for (const [name, config] of Object.entries(this.config.toolboxes)) {
             // Calculate tool count estimate (without connecting)
-            const toolCount = config.mcp_servers.reduce((sum, server) => {
-              if (server.tool_filters && !server.tool_filters.includes("*")) {
-                return sum + server.tool_filters.length;
+            const serverConfigs = Object.values(config.mcpServers);
+            const toolCount = serverConfigs.reduce((sum, server) => {
+              if (server.toolFilters && !server.toolFilters.includes("*")) {
+                return sum + server.toolFilters.length;
               }
               return sum + 10; // Estimate for "*" filter
             }, 0);

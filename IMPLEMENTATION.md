@@ -24,7 +24,7 @@ A TypeScript-based MCP server that acts as an **aggregator and orchestrator** fo
 3. **Client Manager** ([src/client-manager.ts](src/client-manager.ts))
    - **Connection Management**: Opens/closes MCP client connections
    - **Tool Discovery**: Queries `tools/list` from downstream servers
-   - **Tool Filtering**: Applies tool_filters from configuration
+   - **Tool Filtering**: Applies `toolFilters` from configuration
    - **Tool Proxying**: Forwards `tools/call` to appropriate server
    - **Lifecycle Management**: Tracks opened toolboxes and connections
 
@@ -68,16 +68,15 @@ A TypeScript-based MCP server that acts as an **aggregator and orchestrator** fo
   "toolboxes": {
     "toolbox-name": {
       "description": "Human-readable purpose",
-      "mcp_servers": [
-        {
-          "name": "unique-server-id",
+      "mcpServers": {
+        "unique-server-id": {
           "command": "executable",
           "args": ["arg1", "arg2"],
           "env": { "KEY": "value" },
-          "tool_filters": ["*"],
+          "toolFilters": ["*"],
           "transport": "stdio"
         }
-      ]
+      }
     }
   }
 }
@@ -276,15 +275,14 @@ When activated, this skill should:
   "toolboxes": {
     "test": {
       "description": "Test toolbox",
-      "mcp_servers": [
-        {
-          "name": "memory",
+      "mcpServers": {
+        "memory": {
           "command": "npx",
           "args": ["-y", "@modelcontextprotocol/server-memory"],
-          "tool_filters": ["*"],
+          "toolFilters": ["*"],
           "transport": "stdio"
         }
-      ]
+      }
     }
   }
 }

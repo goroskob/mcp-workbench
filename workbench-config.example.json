@@ -2,49 +2,45 @@
   "toolboxes": {
     "filesystem": {
       "description": "Tools for file system operations",
-      "mcp_servers": [
-        {
-          "name": "filesystem",
+      "mcpServers": {
+        "filesystem": {
           "command": "npx",
           "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
-          "tool_filters": ["*"],
+          "toolFilters": ["*"],
           "transport": "stdio"
         }
-      ]
+      }
     },
     "github": {
       "description": "Tools for GitHub repository management",
-      "mcp_servers": [
-        {
-          "name": "github",
+      "mcpServers": {
+        "github": {
           "command": "npx",
           "args": ["-y", "@modelcontextprotocol/server-github"],
           "env": {
             "GITHUB_PERSONAL_ACCESS_TOKEN": "your-token-here"
           },
-          "tool_filters": ["*"],
+          "toolFilters": ["*"],
           "transport": "stdio"
         }
-      ]
+      }
     },
     "data-analysis": {
       "description": "Combined toolbox for data analysis with multiple sources",
-      "mcp_servers": [
-        {
-          "name": "postgres",
+      "mcpServers": {
+        "postgres": {
           "command": "npx",
           "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost/mydb"],
-          "tool_filters": ["*"],
+          "toolFilters": ["*"],
           "transport": "stdio"
         },
-        {
-          "name": "sqlite",
+        "sqlite": {
           "command": "npx",
           "args": ["-y", "@modelcontextprotocol/server-sqlite", "/path/to/database.db"],
-          "tool_filters": ["*"],
+          "toolFilters": ["*"],
           "transport": "stdio"
         }
-      ]
+      }
     }
   }
 }

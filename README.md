@@ -97,18 +97,17 @@ Create a `workbench-config.json` file:
   "toolboxes": {
     "my-toolbox": {
       "description": "Description of what this toolbox is for",
-      "mcp_servers": [
-        {
-          "name": "server-name",
+      "mcpServers": {
+        "server-name": {
           "command": "node",
           "args": ["path/to/server.js"],
           "env": {
             "API_KEY": "your-key-here"
           },
-          "tool_filters": ["*"],
+          "toolFilters": ["*"],
           "transport": "stdio"
         }
-      ]
+      }
     }
   }
 }
@@ -118,13 +117,12 @@ Create a `workbench-config.json` file:
 
 - **toolboxes**: Object mapping toolbox names to configurations
   - **description**: Human-readable purpose of the toolbox
-  - **mcp_servers**: Array of MCP server configurations
-    - **name**: Unique identifier for this server
-    - **command**: Command to execute the MCP server
-    - **args**: Arguments to pass to the command
-    - **env**: Environment variables for the server process
-    - **tool_filters**: Array of tool names to include, or `["*"]` for all tools
-    - **transport**: Transport type (currently only `"stdio"` is supported)
+  - **mcpServers**: Object mapping server names to MCP server configurations (uses standard MCP schema)
+    - **command**: Command to execute the MCP server (required)
+    - **args**: Arguments to pass to the command (optional)
+    - **env**: Environment variables for the server process (optional)
+    - **toolFilters**: Array of tool names to include, or `["*"]` for all tools (optional, workbench extension)
+    - **transport**: Transport type - currently only `"stdio"` is supported (optional, defaults to `"stdio"`, workbench extension)
 
 ## Usage
 
@@ -314,18 +312,18 @@ Create toolboxes for specific Claude skills or sub-agents:
   "toolboxes": {
     "incident-response": {
       "description": "Tools for incident analysis and response",
-      "mcp_servers": [
-        {"name": "clickhouse-logs", ...},
-        {"name": "prometheus-metrics", ...},
-        {"name": "pagerduty", ...}
-      ]
+      "mcpServers": {
+        "clickhouse-logs": {...},
+        "prometheus-metrics": {...},
+        "pagerduty": {...}
+      }
     },
     "code-review": {
       "description": "Tools for code review workflows",
-      "mcp_servers": [
-        {"name": "gitlab", ...},
-        {"name": "sonarqube", ...}
-      ]
+      "mcpServers": {
+        "gitlab": {...},
+        "sonarqube": {...}
+      }
     }
   }
 }
@@ -340,17 +338,17 @@ Organize tools by environment:
   "toolboxes": {
     "production": {
       "description": "Production environment monitoring",
-      "mcp_servers": [
-        {"name": "prod-db", ...},
-        {"name": "prod-metrics", ...}
-      ]
+      "mcpServers": {
+        "prod-db": {...},
+        "prod-metrics": {...}
+      }
     },
     "staging": {
       "description": "Staging environment tools",
-      "mcp_servers": [
-        {"name": "staging-db", ...},
-        {"name": "staging-metrics", ...}
-      ]
+      "mcpServers": {
+        "staging-db": {...},
+        "staging-metrics": {...}
+      }
     }
   }
 }
@@ -423,7 +421,7 @@ npm run clean
 
 - Verify the toolbox is opened with `workbench_open_toolbox`
 - Check the tool name from the open toolbox response
-- Ensure tool_filters include the tool (or use `["*"]`)
+- Ensure `toolFilters` includes the tool (or use `["*"]`)
 
 ## License
 

@@ -5,7 +5,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { McpServerConfig, ServerConnection, OpenedToolbox, ToolboxConfig, ToolInfo } from "./types.js";
+import { WorkbenchServerConfig, ServerConnection, OpenedToolbox, ToolboxConfig, ToolInfo } from "./types.js";
 
 /**
  * Manages connections to MCP servers and toolbox lifecycle
@@ -17,7 +17,10 @@ export class ClientManager {
   /**
    * Connect to an MCP server and retrieve its tools
    */
-  private async connectToServer(config: McpServerConfig): Promise<ServerConnection> {
+  private async connectToServer(
+    serverName: string,
+    config: WorkbenchServerConfig
+  ): Promise<ServerConnection> {
     try {
       // Create client
       const client = new Client(
@@ -66,13 +69,14 @@ export class ClientManager {
 
       // Apply tool filters
       let filteredTools = tools;
-      if (config.tool_filters && !config.tool_filters.includes("*")) {
+      if (config.toolFilters && !config.toolFilters.includes("*")) {
         filteredTools = tools.filter((tool) =>
-          config.tool_filters!.includes(tool.name)
+          config.toolFilters!.includes(tool.name)
         );
       }
 
       return {
+        name: serverName,
         config,
         client,
         transport,
@@ -81,7 +85,7 @@ export class ClientManager {
       };
     } catch (error) {
       throw new Error(
-        `Failed to connect to MCP server '${config.name}': ${
+        `Failed to connect to MCP server '${serverName}': ${
           error instanceof Error ? error.message : String(error)
         }`
       );
@@ -106,16 +110,16 @@ export class ClientManager {
     const tools: ToolInfo[] = [];
 
     // Connect to each server
-    for (const serverConfig of toolboxConfig.mcp_servers) {
+    for (const [serverName, serverConfig] of Object.entries(toolboxConfig.mcpServers)) {
       try {
-        const connection = await this.connectToServer(serverConfig);
-        connections.set(serverConfig.name, connection);
+        const connection = await this.connectToServer(serverName, serverConfig);
+        connections.set(serverName, connection);
 
         // Add tools with metadata
         for (const tool of connection.tools) {
           tools.push({
             ...tool,
-            source_server: serverConfig.name,
+            source_server: serverName,
             toolbox_name: toolboxName,
           });
         }
@@ -244,7 +248,7 @@ export class ClientManager {
       return result;
     } catch (error) {
       throw new Error(
-        `Error calling tool '${toolName}' on server '${foundServer.config.name}': ${
+        `Error calling tool '${toolName}' on server '${foundServer.name}': ${
           error instanceof Error ? error.message : String(error)
         }`
       );

@@ -24,15 +24,34 @@ export async function loadConfig(configPath: string): Promise<WorkbenchConfig> {
         throw new Error(`Toolbox '${name}' must have a description`);
       }
 
-      if (!Array.isArray(toolbox.mcp_servers) || toolbox.mcp_servers.length === 0) {
+      if (!toolbox.mcpServers || typeof toolbox.mcpServers !== "object") {
+        throw new Error(`Toolbox '${name}' must have an 'mcpServers' object`);
+      }
+
+      const serverNames = Object.keys(toolbox.mcpServers);
+      if (serverNames.length === 0) {
         throw new Error(`Toolbox '${name}' must have at least one MCP server`);
       }
 
       // Validate each server config
-      for (const server of toolbox.mcp_servers) {
-        if (!server.name || !server.command) {
+      for (const [serverName, serverConfig] of Object.entries(toolbox.mcpServers)) {
+        if (!serverConfig.command) {
           throw new Error(
-            `Server in toolbox '${name}' must have 'name' and 'command' fields`
+            `Server '${serverName}' in toolbox '${name}' must have a 'command' field`
+          );
+        }
+
+        // Validate args is array if provided
+        if (serverConfig.args !== undefined && !Array.isArray(serverConfig.args)) {
+          throw new Error(
+            `Server '${serverName}' in toolbox '${name}': 'args' must be an array`
+          );
+        }
+
+        // Validate env is object if provided
+        if (serverConfig.env !== undefined && typeof serverConfig.env !== "object") {
+          throw new Error(
+            `Server '${serverName}' in toolbox '${name}': 'env' must be an object`
           );
         }
       }
@@ -55,16 +74,15 @@ export function createExampleConfig(): WorkbenchConfig {
     toolboxes: {
       example: {
         description: "Example toolbox with placeholder servers",
-        mcp_servers: [
-          {
-            name: "example-server",
+        mcpServers: {
+          "example-server": {
             command: "node",
             args: ["example-server.js"],
             env: {},
-            tool_filters: ["*"],
+            toolFilters: ["*"],
             transport: "stdio",
           },
-        ],
+        },
       },
     },
   };
