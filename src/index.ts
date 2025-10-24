@@ -240,7 +240,7 @@ Opening a toolbox:
 1. Connects to each MCP server in the toolbox
 2. Retrieves the list of available tools from each server
 3. Applies any tool filters specified in the configuration
-4. Returns tool list for use with workbench_use_tool
+4. Returns complete tool list with full schemas
 
 The tool list includes complete schemas and metadata for each tool.
 Use workbench_use_tool to execute tools by their original names.
@@ -256,8 +256,16 @@ Returns:
     "toolbox": string,              // Toolbox name
     "description": string,          // Purpose description
     "servers_connected": number,    // Number of MCP servers connected
-    "tools_registered": number,     // Number of tools available
-    "message": string               // Success message
+    "tools": [
+      {
+        "name": string,             // Tool identifier
+        "source_server": string,    // Which MCP server provides this
+        "toolbox_name": string,     // Toolbox this tool belongs to
+        "description": string,      // What the tool does
+        "inputSchema": object,      // JSON schema for parameters
+        "annotations": object       // Tool hints (readOnly, etc.)
+      }
+    ]
   }
 
 Examples:
@@ -342,7 +350,7 @@ Error Handling:
           }
 
           // Open the toolbox (connects to servers and registers tools)
-          const { connections, toolsRegistered } = await this.clientManager.openToolbox(
+          const { connections, tools } = await this.clientManager.openToolbox(
             params.toolbox_name,
             toolboxConfig,
             this.server
@@ -355,8 +363,7 @@ Error Handling:
             toolbox: params.toolbox_name,
             description: toolboxConfig.description,
             servers_connected: connections.size,
-            tools_registered: toolsRegistered,
-            message: `Successfully opened toolbox '${params.toolbox_name}' and registered ${toolsRegistered} tools. Tools are now available with server-prefixed names (e.g., {server}_{tool}).`,
+            tools,
           };
 
           return {

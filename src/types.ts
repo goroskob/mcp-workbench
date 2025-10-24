@@ -92,8 +92,7 @@ export interface OpenToolboxResult {
   toolbox: string;
   description: string;
   servers_connected: number;
-  tools_registered: number;
-  message: string;
+  tools: ToolInfo[];
 }
 
 /**

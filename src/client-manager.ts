@@ -100,12 +100,12 @@ export class ClientManager {
     toolboxName: string,
     toolboxConfig: ToolboxConfig,
     mcpServer: McpServer
-  ): Promise<{ connections: Map<string, ServerConnection>; toolsRegistered: number }> {
+  ): Promise<{ connections: Map<string, ServerConnection>; tools: ToolInfo[] }> {
     // Check if already open
     if (this.openedToolboxes.has(toolboxName)) {
       const existing = this.openedToolboxes.get(toolboxName)!;
-      const toolsRegistered = existing.registeredTools.size;
-      return { connections: existing.connections, toolsRegistered };
+      const tools = this.getToolsFromConnections(toolboxName, existing.connections);
+      return { connections: existing.connections, tools };
     }
 
     const connections = new Map<string, ServerConnection>();
@@ -143,7 +143,10 @@ export class ClientManager {
     };
     this.openedToolboxes.set(toolboxName, openedToolbox);
 
-    return { connections, toolsRegistered: registeredTools.size };
+    // Get full tool list with schemas
+    const tools = this.getToolsFromConnections(toolboxName, connections);
+
+    return { connections, tools };
   }
 
   /**
@@ -161,6 +164,29 @@ export class ClientManager {
           server: serverName,
           description: tool.description,
           title: tool.title,
+        });
+      }
+    }
+
+    return tools;
+  }
+
+  /**
+   * Get full tool list with schemas from connections
+   * Used for proxy mode to return complete tool information
+   */
+  private getToolsFromConnections(
+    toolboxName: string,
+    connections: Map<string, ServerConnection>
+  ): ToolInfo[] {
+    const tools: ToolInfo[] = [];
+
+    for (const [serverName, connection] of connections) {
+      for (const tool of connection.tools) {
+        tools.push({
+          ...tool,
+          source_server: serverName,
+          toolbox_name: toolboxName,
         });
       }
     }
