@@ -1,0 +1,16 @@
+{
+  "toolboxes": {
+    "memory-test": {
+      "description": "Simple test toolbox using the memory MCP server",
+      "mcp_servers": [
+        {
+          "name": "memory",
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-memory"],
+          "tool_filters": ["*"],
+          "transport": "stdio"
+        }
+      ]
+    }
+  }
+}
