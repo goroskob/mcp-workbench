@@ -50,10 +50,19 @@ class WorkbenchServer {
   constructor(config: WorkbenchConfig) {
     this.config = config;
     this.clientManager = new ClientManager();
-    this.server = new McpServer({
-      name: "mcp-workbench",
-      version: "0.2.0",
-    });
+    this.server = new McpServer(
+      {
+        name: "mcp-workbench",
+        version: "0.2.0",
+      },
+      {
+        capabilities: {
+          tools: {
+            listChanged: true,
+          },
+        },
+      }
+    );
 
     this.registerTools();
   }
