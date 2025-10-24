@@ -32,3 +32,6 @@ coverage/
 
 # Serena MCP
 .serena/
+
+# Claude Code
+.claude/
