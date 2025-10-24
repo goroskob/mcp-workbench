@@ -13,7 +13,52 @@ Instead of managing connections to multiple MCP servers manually, MCP Workbench 
 
 ## Installation
 
+### Option 1: No Installation Required (Use with npx)
+
+You can use `npx` to run mcp-workbench directly from GitHub without manual installation:
+
+```json
+{
+  "mcpServers": {
+    "mcp-workbench": {
+      "command": "npx",
+      "args": ["-y", "github:goroskob/mcp-workbench#v0.0.2"],
+      "env": {
+        "WORKBENCH_CONFIG": "/absolute/path/to/workbench-config.json"
+      }
+    }
+  }
+}
+```
+
+The `-y` flag tells npx to automatically install without prompting. The first run will download and cache the package, subsequent runs will use the cached version.
+
+### Option 2: Install Globally
+
 ```bash
+npm install -g github:goroskob/mcp-workbench#v0.0.2
+```
+
+Then use in Claude Desktop config:
+
+```json
+{
+  "mcpServers": {
+    "mcp-workbench": {
+      "command": "mcp-workbench",
+      "env": {
+        "WORKBENCH_CONFIG": "/absolute/path/to/workbench-config.json"
+      }
+    }
+  }
+}
+```
+
+### Option 3: From Source (For Development)
+
+```bash
+git clone https://github.com/goroskob/mcp-workbench.git
+cd mcp-workbench
 npm install
 npm run build
 ```
@@ -68,21 +113,65 @@ export WORKBENCH_CONFIG=/path/to/workbench-config.json
 npm start
 ```
 
-Or use it in your MCP client configuration (e.g., Claude Desktop):
+### Use with Claude Desktop
+
+Add to your Claude Desktop configuration file:
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+- **Linux**: `~/.config/Claude/claude_desktop_config.json`
+
+**Using npx (recommended - no manual installation):**
 
 ```json
 {
   "mcpServers": {
-    "workbench": {
-      "command": "node",
-      "args": ["/path/to/mcp-workbench/dist/index.js"],
+    "mcp-workbench": {
+      "command": "npx",
+      "args": ["-y", "github:goroskob/mcp-workbench#v0.0.2"],
       "env": {
-        "WORKBENCH_CONFIG": "/path/to/workbench-config.json"
+        "WORKBENCH_CONFIG": "/Users/yourname/.config/mcp-workbench/workbench-config.json"
       }
     }
   }
 }
 ```
+
+**Or if installed globally:**
+
+```json
+{
+  "mcpServers": {
+    "mcp-workbench": {
+      "command": "mcp-workbench",
+      "env": {
+        "WORKBENCH_CONFIG": "/Users/yourname/.config/mcp-workbench/workbench-config.json"
+      }
+    }
+  }
+}
+```
+
+**Or from local installation:**
+
+```json
+{
+  "mcpServers": {
+    "mcp-workbench": {
+      "command": "node",
+      "args": ["/absolute/path/to/mcp-workbench/dist/index.js"],
+      "env": {
+        "WORKBENCH_CONFIG": "/Users/yourname/.config/mcp-workbench/workbench-config.json"
+      }
+    }
+  }
+}
+```
+
+**Important**:
+- Use absolute paths for `WORKBENCH_CONFIG`, not relative paths
+- Replace `/Users/yourname/` with your actual home directory
+- Make sure you've created your `workbench-config.json` file first (see Configuration section)
+- After updating the configuration, restart Claude Desktop
 
 ### Available Tools
 
