@@ -190,6 +190,15 @@ Returns:
     "description": string,          // Purpose description
     "servers_connected": number,    // Number of MCP servers connected
     "tools_registered": number,     // Number of tools registered
+    "tools": [                      // List of available tools
+      {
+        "name": string,             // Prefixed tool name (e.g., "filesystem_read_file")
+        "original_name": string,    // Original name from server (e.g., "read_file")
+        "server": string,           // Source server name (e.g., "filesystem")
+        "description": string,      // Tool description (optional)
+        "title": string             // Tool title (optional)
+      }
+    ],
     "message": string               // Success message
   }
 
@@ -228,7 +237,7 @@ Error Handling:
           }
 
           // Open the toolbox (connects to servers and registers tools)
-          const { connections, toolsRegistered } = await this.clientManager.openToolbox(
+          const { connections, toolsRegistered, tools } = await this.clientManager.openToolbox(
             params.toolbox_name,
             toolboxConfig,
             this.server
@@ -242,6 +251,7 @@ Error Handling:
             description: toolboxConfig.description,
             servers_connected: connections.size,
             tools_registered: toolsRegistered,
+            tools: tools,
             message: `Successfully opened toolbox '${params.toolbox_name}' and registered ${toolsRegistered} tools. Tools are now available with server-prefixed names (e.g., {server}_{tool}).`,
           };
 

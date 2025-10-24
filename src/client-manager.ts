@@ -6,7 +6,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { WorkbenchServerConfig, ServerConnection, OpenedToolbox, ToolboxConfig, ToolInfo } from "./types.js";
+import { WorkbenchServerConfig, ServerConnection, OpenedToolbox, ToolboxConfig, ToolInfo, RegisteredToolInfo } from "./types.js";
 
 /**
  * Manages connections to MCP servers and toolbox lifecycle
@@ -100,12 +100,13 @@ export class ClientManager {
     toolboxName: string,
     toolboxConfig: ToolboxConfig,
     mcpServer: McpServer
-  ): Promise<{ connections: Map<string, ServerConnection>; toolsRegistered: number }> {
+  ): Promise<{ connections: Map<string, ServerConnection>; toolsRegistered: number; tools: RegisteredToolInfo[] }> {
     // Check if already open
     if (this.openedToolboxes.has(toolboxName)) {
       const existing = this.openedToolboxes.get(toolboxName)!;
       const toolsRegistered = existing.registeredTools.size;
-      return { connections: existing.connections, toolsRegistered };
+      const tools = this.getToolInfoList(existing);
+      return { connections: existing.connections, toolsRegistered, tools };
     }
 
     const connections = new Map<string, ServerConnection>();
@@ -134,15 +135,39 @@ export class ClientManager {
     );
 
     // Store opened toolbox
-    this.openedToolboxes.set(toolboxName, {
+    const openedToolbox: OpenedToolbox = {
       name: toolboxName,
       config: toolboxConfig,
       connections,
       registeredTools,
       opened_at: new Date(),
-    });
+    };
+    this.openedToolboxes.set(toolboxName, openedToolbox);
 
-    return { connections, toolsRegistered: registeredTools.size };
+    const tools = this.getToolInfoList(openedToolbox);
+    return { connections, toolsRegistered: registeredTools.size, tools };
+  }
+
+  /**
+   * Extract tool information list from an opened toolbox
+   */
+  private getToolInfoList(toolbox: OpenedToolbox): RegisteredToolInfo[] {
+    const tools: RegisteredToolInfo[] = [];
+
+    for (const [serverName, connection] of toolbox.connections) {
+      for (const tool of connection.tools) {
+        const prefixedName = `${serverName}_${tool.name}`;
+        tools.push({
+          name: prefixedName,
+          original_name: tool.name,
+          server: serverName,
+          description: tool.description,
+          title: tool.title,
+        });
+      }
+    }
+
+    return tools;
   }
 
   /**

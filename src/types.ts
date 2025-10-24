@@ -68,6 +68,22 @@ export interface ToolboxSummary {
 }
 
 /**
+ * Information about a registered tool
+ */
+export interface RegisteredToolInfo {
+  /** Prefixed tool name (e.g., "filesystem_read_file") */
+  name: string;
+  /** Original tool name from downstream server (e.g., "read_file") */
+  original_name: string;
+  /** Source server name (e.g., "filesystem") */
+  server: string;
+  /** Tool description */
+  description?: string;
+  /** Tool title */
+  title?: string;
+}
+
+/**
  * Result of opening a toolbox
  */
 export interface OpenToolboxResult {
@@ -75,6 +91,7 @@ export interface OpenToolboxResult {
   description: string;
   servers_connected: number;
   tools_registered: number;
+  tools: RegisteredToolInfo[];
   message: string;
 }
 
