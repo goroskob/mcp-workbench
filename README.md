@@ -8,8 +8,13 @@ Instead of managing connections to multiple MCP servers manually, MCP Workbench 
 
 1. **Organize tools by domain** - Group related MCP servers into named toolboxes (e.g., "incident-analysis", "gitlab-workflow")
 2. **Dynamic discovery** - Open a toolbox to discover all available tools from its servers
-3. **Unified invocation** - Call tools through a single interface that proxies to the appropriate server
+3. **Unified invocation** - Call tools through dynamic registration (default) or proxy mode
 4. **Efficient resource management** - Open/close toolboxes as needed to manage connections
+
+### Two Invocation Modes
+
+- **Dynamic Mode (default)**: Tools are automatically registered on the workbench server and appear natively in your MCP client's tool list with prefixed names (e.g., `clickhouse_list_databases`)
+- **Proxy Mode**: Tools are accessed via the `workbench_use_tool` meta-tool, designed for MCP clients that don't support dynamic tool registration
 
 ## Installation
 
@@ -94,6 +99,7 @@ Create a `workbench-config.json` file:
 
 ```json
 {
+  "toolMode": "dynamic",
   "toolboxes": {
     "my-toolbox": {
       "description": "Description of what this toolbox is for",
@@ -115,6 +121,9 @@ Create a `workbench-config.json` file:
 
 ### Configuration Options
 
+- **toolMode**: Tool invocation mode - `"dynamic"` (default) or `"proxy"` (optional, top-level)
+  - **dynamic**: Tools are automatically registered with prefixed names (e.g., `clickhouse_list_databases`)
+  - **proxy**: Tools are accessed via `workbench_use_tool` meta-tool
 - **toolboxes**: Object mapping toolbox names to configurations
   - **description**: Human-readable purpose of the toolbox
   - **mcpServers**: Object mapping server names to MCP server configurations (uses standard MCP schema)
@@ -199,7 +208,7 @@ Add to your configuration file:
 
 ### Available Tools
 
-The workbench provides four main tools:
+The workbench provides 3-4 meta-tools depending on the configured `toolMode`:
 
 #### 1. `workbench_list_toolboxes`
 
@@ -226,22 +235,23 @@ List all available toolboxes and their status.
 
 Open a toolbox and discover its tools.
 
+**In Proxy Mode:**
 ```typescript
 // Input:
 {
   "toolbox_name": "incident-analysis"
 }
 
-// Output:
+// Output: (returns full tool list with schemas)
 {
   "toolbox": "incident-analysis",
   "description": "Tools for analyzing incidents",
   "servers_connected": 2,
   "tools": [
     {
-      "name": "list_databases",
+      "name": "clickhouse_list_databases",  // Server-prefixed name
       "source_server": "clickhouse",
-      "description": "List available databases",
+      "description": "[clickhouse] List available databases",
       "inputSchema": {...},
       "annotations": {...}
     },
@@ -250,15 +260,35 @@ Open a toolbox and discover its tools.
 }
 ```
 
-#### 3. `workbench_use_tool`
+**In Dynamic Mode:**
+```typescript
+// Input:
+{
+  "toolbox_name": "incident-analysis"
+}
 
-Execute a tool from an opened toolbox.
+// Output: (tools are registered, returns count)
+{
+  "toolbox": "incident-analysis",
+  "description": "Tools for analyzing incidents",
+  "servers_connected": 2,
+  "tools_registered": 15,
+  "message": "Toolbox opened and tools registered with prefix 'servername_'"
+}
+
+// After opening, tools like 'clickhouse_list_databases' appear
+// directly in your MCP client's tool list
+```
+
+#### 3. `workbench_use_tool` _(Proxy Mode Only)_
+
+Execute a tool from an opened toolbox. Only available when `toolMode: "proxy"`.
 
 ```typescript
 // Input:
 {
   "toolbox_name": "incident-analysis",
-  "tool_name": "list_databases",
+  "tool_name": "clickhouse_list_databases",  // Server-prefixed name
   "arguments": {
     // tool-specific arguments
   }
@@ -278,10 +308,12 @@ Close a toolbox and disconnect from its servers.
 }
 
 // Output:
-"Successfully closed toolbox 'incident-analysis' and disconnected from all servers."
+"Successfully closed toolbox 'incident-analysis', unregistered tools, and disconnected from all servers."
 ```
 
-## Workflow Example
+## Workflow Examples
+
+### Proxy Mode Workflow
 
 ```typescript
 // 1. List available toolboxes
@@ -290,14 +322,31 @@ workbench_list_toolboxes()
 // 2. Open the toolbox you need
 workbench_open_toolbox({ toolbox_name: "data-analysis" })
 
-// 3. Use tools from the toolbox
+// 3. Use tools from the toolbox via workbench_use_tool
 workbench_use_tool({
   toolbox_name: "data-analysis",
-  tool_name: "query_database",
+  tool_name: "postgres_query_database",  // Server-prefixed name
   arguments: { query: "SELECT * FROM users LIMIT 10" }
 })
 
 // 4. Close when done
+workbench_close_toolbox({ toolbox_name: "data-analysis" })
+```
+
+### Dynamic Mode Workflow
+
+```typescript
+// 1. List available toolboxes
+workbench_list_toolboxes()
+
+// 2. Open the toolbox you need
+workbench_open_toolbox({ toolbox_name: "data-analysis" })
+// This registers tools like 'postgres_query_database' in your MCP client
+
+// 3. Call tools directly by their registered names
+postgres_query_database({ query: "SELECT * FROM users LIMIT 10" })
+
+// 4. Close when done (unregisters tools)
 workbench_close_toolbox({ toolbox_name: "data-analysis" })
 ```
 
@@ -366,17 +415,22 @@ Organize tools by environment:
 ┌────────────▼────────────────────────┐
 │        MCP Workbench Server         │
 │  ┌──────────────────────────────┐   │
-│  │  4 Workbench Tools:          │   │
+│  │  Meta-Tools (3-4 tools):     │   │
 │  │  - list_toolboxes            │   │
 │  │  - open_toolbox              │   │
-│  │  - use_tool                  │   │
+│  │  - use_tool (proxy mode)     │   │
 │  │  - close_toolbox             │   │
+│  │                              │   │
+│  │  Dynamic Mode:               │   │
+│  │  + Registered downstream     │   │
+│  │    tools (server_toolname)   │   │
 │  └──────────────────────────────┘   │
 │  ┌──────────────────────────────┐   │
 │  │  Client Manager              │   │
 │  │  - Connection pooling        │   │
 │  │  - Tool discovery            │   │
-│  │  - Request proxying          │   │
+│  │  - Dynamic registration or   │   │
+│  │    request proxying          │   │
 │  └──────────────────────────────┘   │
 └────────┬────────────┬───────────────┘
          │            │

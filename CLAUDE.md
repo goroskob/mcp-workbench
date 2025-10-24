@@ -4,7 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-MCP Workbench is a **meta-MCP server** that aggregates tools from other MCP servers and organizes them into "toolboxes" for dynamic discovery and invocation. It acts as an orchestrator that connects to downstream MCP servers and **dynamically registers** their tools on the workbench server with prefixed names.
+MCP Workbench is a **meta-MCP server** that aggregates tools from other MCP servers and organizes them into "toolboxes" for discovery and invocation. It acts as an orchestrator that connects to downstream MCP servers and provides two modes of operation:
+
+- **Dynamic mode** (default): Tools are dynamically registered on the workbench server with prefixed names, appearing natively in the MCP client's tool list
+- **Proxy mode**: Tools are accessed via a `workbench_use_tool` meta-tool, designed for MCP clients that don't support dynamic tool registration
 
 ## Build and Development Commands
 
@@ -81,13 +84,29 @@ For automated npm publishing to work, the repository must have:
 MCP Client → Workbench Server (calls registered tool) → Client Manager → Downstream MCP Server(s)
 ```
 
-The workbench acts as both an **MCP server** (exposes 3 meta-tools + dynamically registered downstream tools) and an **MCP client** (connects to downstream servers).
+The workbench acts as both an **MCP server** (exposes 3-4 meta-tools depending on mode) and an **MCP client** (connects to downstream servers).
 
-### Dynamic Tool Registration
+### Tool Invocation Modes
+
+The workbench supports two modes for invoking downstream tools, controlled by the `toolMode` configuration field:
+
+#### Dynamic Mode (default, `toolMode: "dynamic"`)
 When a toolbox is opened, downstream tools are **dynamically registered** on the workbench server with prefixed names (`{server}_{tool}`). This means:
 - Tools appear natively in the MCP client's tool list
 - No proxy layer needed - tools are called directly by name
 - Better IDE integration and discoverability
+- `workbench_open_toolbox` returns a count of registered tools
+- **Workbench exposes 3 meta-tools**: `workbench_list_toolboxes`, `workbench_open_toolbox`, `workbench_close_toolbox`
+
+#### Proxy Mode (`toolMode: "proxy"`)
+When a toolbox is opened, tool information is returned but tools are **not dynamically registered**. Instead:
+- Tools are invoked via the `workbench_use_tool` meta-tool
+- MCP client explicitly specifies toolbox name, tool name, and arguments
+- Designed for MCP clients that don't support dynamic tool registration
+- `workbench_open_toolbox` returns full tool list with schemas
+- **Workbench exposes 4 meta-tools**: `workbench_list_toolboxes`, `workbench_open_toolbox`, `workbench_close_toolbox`, `workbench_use_tool`
+
+**Tool naming is consistent in both modes**: Tools are always identified with the `{server}_{tool}` prefix to avoid conflicts.
 
 ### Core Components
 
@@ -114,17 +133,29 @@ When a toolbox is opened, downstream tools are **dynamically registered** on the
 - Each toolbox contains an `mcpServers` object using standard MCP schema
 
 **src/types.ts** - TypeScript type system
-- `WorkbenchConfig`, `ToolboxConfig`, `McpServerConfig`, `WorkbenchServerConfig` define configuration schema
-- `ServerConnection` tracks MCP client instances, transports, and cached tools
-- `OpenedToolbox` represents runtime state with connections and `registeredTools` map
-- `ToolInfo` extends MCP SDK's `Tool` type with `source_server` and `toolbox_name` metadata
-- `OpenToolboxResult` now includes `tools_registered` count instead of full tool list
+- `WorkbenchConfig` - Configuration schema with optional `toolMode` field and `toolboxes` map
+- `ToolboxConfig`, `McpServerConfig`, `WorkbenchServerConfig` - Define toolbox and server configurations
+- `ServerConnection` - Tracks MCP client instances, transports, and cached tools
+- `OpenedToolbox` - Represents runtime state with connections and `registeredTools` map (dynamic mode only)
+- `ToolInfo` - Extends MCP SDK's `Tool` type with `source_server`, `toolbox_name`, and `original_name` metadata
+- `OpenToolboxResult` - Return type varies by mode:
+  - **Proxy mode**: Contains full `tools: ToolInfo[]` array with schemas
+  - **Dynamic mode**: Contains `tools_registered: number` count (tools are registered, not returned)
 
-### The 3 Workbench Meta-Tools
+### The Workbench Meta-Tools
 
+The workbench exposes 3-4 meta-tools depending on the configured `toolMode`:
+
+**Always Available (Both Modes):**
 1. **workbench_list_toolboxes** - Lists configured toolboxes (read-only, no connections made)
-2. **workbench_open_toolbox** - Connects to all MCP servers in a toolbox, dynamically registers their tools with prefixed names, sends tool list changed notification
-3. **workbench_close_toolbox** - Unregisters tools, disconnects all servers in a toolbox, sends tool list changed notification
+2. **workbench_open_toolbox** - Connects to all MCP servers in a toolbox
+   - **Dynamic mode**: Registers tools with prefixed names, sends tool list changed notification, returns tools_registered count
+   - **Proxy mode**: Returns full tool list with schemas for use with `workbench_use_tool`
+3. **workbench_close_toolbox** - Disconnects all servers in a toolbox, sends tool list changed notification
+   - **Dynamic mode**: Also unregisters all dynamically registered tools
+
+**Proxy Mode Only:**
+4. **workbench_use_tool** - Executes a tool from an opened toolbox by delegating to the downstream server (only registered when `toolMode: "proxy"`)
 
 ### Tool Naming Convention
 
@@ -146,6 +177,7 @@ The server requires a `workbench-config.json` file with this structure:
 
 ```json
 {
+  "toolMode": "dynamic",
   "toolboxes": {
     "toolbox-name": {
       "description": "Purpose of this toolbox",
@@ -164,9 +196,12 @@ The server requires a `workbench-config.json` file with this structure:
 ```
 
 **Configuration Schema Notes:**
+- **toolMode** (optional, top-level): Tool invocation mode - `"dynamic"` (default) or `"proxy"`
+  - **dynamic**: Tools are dynamically registered on the workbench server and appear in MCP client's tool list
+  - **proxy**: Tools are accessed via `workbench_use_tool` meta-tool (for clients without dynamic registration support)
 - **toolbox_name**: Used as identifier in tool calls
 - **mcpServers**: Uses the **standard MCP configuration schema** (compatible with Claude Desktop/.claude.json)
-  - Keys are server names (unique identifiers)
+  - Keys are server names (unique identifiers, used as tool name prefix)
   - Values follow the standard MCP server config: `command`, `args`, `env`
 - **Workbench-specific extensions**:
   - **toolFilters**: `["*"]` = all tools, or specify exact tool names to include
@@ -182,13 +217,16 @@ Connections are **not** created at server startup. They're created when `workben
 - Resources freed by closing unused toolboxes
 - Fresh tool discovery on each open
 
-### Dynamic Tool Registration
+### Tool Registration and Invocation Patterns
+
+#### Dynamic Mode (Default)
 When `workbench_open_toolbox` is called:
 1. Connects to all downstream MCP servers
 2. Queries `tools/list` from each server
-3. Registers each tool on workbench server with prefixed name
+3. Registers each tool on workbench server with prefixed name (`{server}_{tool}`)
 4. Creates handler that delegates to downstream server via `client.callTool()`
 5. Sends `tool list changed` notification to MCP clients
+6. Returns `tools_registered` count
 
 When a registered tool is called:
 1. MCP client calls tool by prefixed name (e.g., `filesystem_read_file`)
@@ -200,6 +238,22 @@ When `workbench_close_toolbox` is called:
 1. Calls `.remove()` on each registered tool
 2. Disconnects from downstream servers
 3. Sends `tool list changed` notification
+
+#### Proxy Mode
+When `workbench_open_toolbox` is called:
+1. Connects to all downstream MCP servers
+2. Queries `tools/list` from each server
+3. Returns full tool list with schemas and metadata (no registration)
+4. Tools are prefixed with server name in the returned list
+
+When `workbench_use_tool` is called:
+1. MCP client specifies `toolbox_name`, `tool_name` (prefixed), and `arguments`
+2. Workbench finds the appropriate server connection and original tool name
+3. Delegates to downstream server: `client.callTool({ name: original_name, arguments })`
+4. Returns downstream response directly
+
+When `workbench_close_toolbox` is called:
+1. Disconnects from downstream servers (no tools to unregister)
 
 ### Error Handling Pattern
 - **Configuration errors**: Fail fast at startup with clear messages
@@ -237,12 +291,16 @@ Recommended test servers (no auth required):
 4. Follow handler signature: `async (args: { [x: string]: any }) => ...`
 
 ### Tool Name Conflicts
-Tool names are **always prefixed** with server name (`{server}_{tool}`) to ensure:
+Tool names are **always prefixed** with server name (`{server}_{tool}`) in both modes to ensure:
 - No conflicts between servers
 - Predictable, consistent naming
 - Clear tool origin
 
-If you need different behavior, modify `ClientManager.registerToolsOnServer()` in [src/client-manager.ts](src/client-manager.ts:152).
+**In dynamic mode**, this prefixing happens during registration via `ClientManager.registerToolsOnServer()` in [src/client-manager.ts:224](src/client-manager.ts#L224).
+
+**In proxy mode**, this prefixing happens when building the tool list via `ClientManager.getToolsFromConnections()` in [src/client-manager.ts:188](src/client-manager.ts#L188).
+
+If you need different behavior, modify these methods.
 
 ## TypeScript Notes
 
