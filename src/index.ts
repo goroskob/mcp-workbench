@@ -69,7 +69,7 @@ class WorkbenchServer {
     this.clientManager = new ClientManager();
     this.server = new McpServer({
       name: "mcp-workbench",
-      version: "0.0.1",
+      version: "0.0.2",
     });
 
     this.registerTools();
