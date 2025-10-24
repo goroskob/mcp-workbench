@@ -100,13 +100,12 @@ export class ClientManager {
     toolboxName: string,
     toolboxConfig: ToolboxConfig,
     mcpServer: McpServer
-  ): Promise<{ connections: Map<string, ServerConnection>; toolsRegistered: number; tools: RegisteredToolInfo[] }> {
+  ): Promise<{ connections: Map<string, ServerConnection>; toolsRegistered: number }> {
     // Check if already open
     if (this.openedToolboxes.has(toolboxName)) {
       const existing = this.openedToolboxes.get(toolboxName)!;
       const toolsRegistered = existing.registeredTools.size;
-      const tools = this.getToolInfoList(existing);
-      return { connections: existing.connections, toolsRegistered, tools };
+      return { connections: existing.connections, toolsRegistered };
     }
 
     const connections = new Map<string, ServerConnection>();
@@ -144,8 +143,7 @@ export class ClientManager {
     };
     this.openedToolboxes.set(toolboxName, openedToolbox);
 
-    const tools = this.getToolInfoList(openedToolbox);
-    return { connections, toolsRegistered: registeredTools.size, tools };
+    return { connections, toolsRegistered: registeredTools.size };
   }
 
   /**

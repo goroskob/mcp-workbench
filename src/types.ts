@@ -91,7 +91,6 @@ export interface OpenToolboxResult {
   description: string;
   servers_connected: number;
   tools_registered: number;
-  tools: RegisteredToolInfo[];
   message: string;
 }
 
