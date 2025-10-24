@@ -313,6 +313,35 @@ export class ClientManager {
   }
 
   /**
+   * Find a tool in an opened toolbox by its original name
+   * Returns the connection and tool, or throws an error if not found
+   */
+  findToolInToolbox(toolboxName: string, toolName: string): { connection: ServerConnection; tool: Tool } {
+    const toolbox = this.openedToolboxes.get(toolboxName);
+    if (!toolbox) {
+      throw new Error(`Toolbox '${toolboxName}' is not currently open. Please open it first with workbench_open_toolbox.`);
+    }
+
+    // Search all connections for a tool with this name
+    for (const connection of toolbox.connections.values()) {
+      const tool = connection.tools.find(t => t.name === toolName);
+      if (tool) {
+        return { connection, tool };
+      }
+    }
+
+    // Tool not found - provide helpful error message
+    const availableTools: string[] = [];
+    for (const connection of toolbox.connections.values()) {
+      availableTools.push(...connection.tools.map(t => t.name));
+    }
+
+    throw new Error(
+      `Tool '${toolName}' not found in toolbox '${toolboxName}'. Available tools: ${availableTools.join(", ")}`
+    );
+  }
+
+  /**
    * Close all toolboxes and cleanup
    */
   async closeAll(): Promise<void> {

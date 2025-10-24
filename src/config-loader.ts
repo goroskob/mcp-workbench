@@ -18,6 +18,11 @@ export async function loadConfig(configPath: string): Promise<WorkbenchConfig> {
       throw new Error("Configuration must have a 'toolboxes' object");
     }
 
+    // Validate enableLegacyProxy if provided
+    if (config.enableLegacyProxy !== undefined && typeof config.enableLegacyProxy !== "boolean") {
+      throw new Error("Configuration field 'enableLegacyProxy' must be a boolean");
+    }
+
     // Validate each toolbox
     for (const [name, toolbox] of Object.entries(config.toolboxes)) {
       if (!toolbox.description) {

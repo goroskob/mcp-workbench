@@ -45,6 +45,8 @@ export interface ToolboxConfig {
 export interface WorkbenchConfig {
   /** Named toolboxes containing MCP server configurations */
   toolboxes: Record<string, ToolboxConfig>;
+  /** Enable legacy proxy tool (workbench_use_tool) for MCP clients without dynamic tool registration support (default: false) */
+  enableLegacyProxy?: boolean;
 }
 
 /**

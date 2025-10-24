@@ -1,0 +1,16 @@
+{
+  "enableLegacyProxy": true,
+  "toolboxes": {
+    "test-memory": {
+      "description": "Test toolbox with memory server for legacy proxy testing",
+      "mcpServers": {
+        "memory": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-memory"],
+          "toolFilters": ["*"],
+          "transport": "stdio"
+        }
+      }
+    }
+  }
+}

@@ -34,10 +34,29 @@ const CloseToolboxInputSchema = z
   })
   .strict();
 
+const UseToolInputSchema = z
+  .object({
+    toolbox_name: z
+      .string()
+      .min(1)
+      .describe("Name of the toolbox containing the tool"),
+    tool_name: z
+      .string()
+      .min(1)
+      .describe("Original name of the tool to execute (not prefixed)"),
+    arguments: z
+      .record(z.any())
+      .describe("Arguments to pass to the tool")
+      .optional()
+      .default({}),
+  })
+  .strict();
+
 // Type inference
 type ListToolboxesInput = z.infer<typeof ListToolboxesInputSchema>;
 type OpenToolboxInput = z.infer<typeof OpenToolboxInputSchema>;
 type CloseToolboxInput = z.infer<typeof CloseToolboxInputSchema>;
+type UseToolInput = z.infer<typeof UseToolInputSchema>;
 
 /**
  * Main server class
@@ -350,6 +369,82 @@ Error Handling:
         }
       }
     );
+
+    // Tool 4: Use a tool (legacy proxy mode) - only if enabled
+    if (this.config.enableLegacyProxy) {
+      this.server.registerTool(
+        "workbench_use_tool",
+        {
+          title: "Use a Tool from Toolbox",
+          description: `Execute a tool from an opened toolbox (legacy proxy mode).
+
+This tool provides backward compatibility for MCP clients that don't support
+dynamic tool registration. Modern clients should use the dynamically registered
+tools directly (prefixed with server name, e.g., 'filesystem_read_file').
+
+How it works:
+1. Specify the toolbox name and tool name
+2. Provide the tool arguments as an object
+3. The workbench proxies the request to the appropriate MCP server
+4. Returns the tool's response
+
+Args:
+  - toolbox_name: Name of an opened toolbox
+  - tool_name: Original tool name (not prefixed, e.g., 'read_file' not 'filesystem_read_file')
+  - arguments: Tool arguments as a JSON object (optional)
+
+Returns:
+  Proxied response from the underlying tool
+
+Examples:
+  - Use when: Your MCP client doesn't support dynamic tool registration
+  - Use when: You prefer explicit toolbox/tool naming
+  - After: Opening a toolbox with workbench_open_toolbox
+
+Error Handling:
+  - Returns error if toolbox is not open
+  - Returns error if tool is not found in the toolbox
+  - Propagates errors from the underlying tool`,
+          inputSchema: UseToolInputSchema.shape,
+          annotations: {
+            readOnlyHint: false,
+            destructiveHint: false,
+            idempotentHint: false,
+            openWorldHint: true,
+          },
+        },
+        async (args: { [x: string]: any }) => {
+          const params = args as UseToolInput;
+          try {
+            // Find the tool in the opened toolbox
+            const { connection, tool } = this.clientManager.findToolInToolbox(
+              params.toolbox_name,
+              params.tool_name
+            );
+
+            // Delegate to the downstream server
+            const result = await connection.client.callTool({
+              name: tool.name,
+              arguments: params.arguments,
+            });
+
+            return result;
+          } catch (error) {
+            return {
+              content: [
+                {
+                  type: "text" as const,
+                  text: `Error executing tool '${params.tool_name}' in toolbox '${params.toolbox_name}': ${
+                    error instanceof Error ? error.message : String(error)
+                  }`,
+                },
+              ],
+              isError: true,
+            };
+          }
+        }
+      );
+    }
   }
 
   /**
