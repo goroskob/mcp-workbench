@@ -91,11 +91,8 @@ class WorkbenchServer {
    */
   private registerTools(): void {
     // Tool 1: List available toolboxes
-    this.server.registerTool(
-      "workbench_list_toolboxes",
-      {
-        title: "List Available Toolboxes",
-        description: `List all available toolboxes configured in the workbench.
+    const listToolboxesDescription = this.config.toolMode === 'proxy'
+      ? `List all available toolboxes configured in the workbench.
 
 A toolbox is a named collection of MCP tools organized by purpose or domain.
 Each toolbox can contain tools from one or more MCP servers.
@@ -106,6 +103,11 @@ This tool returns:
 - Whether each toolbox is currently open
 
 Use this tool to discover what toolboxes are available before opening one.
+
+Workflow with proxy mode:
+1. Use this tool to list available toolboxes
+2. Use workbench_open_toolbox to open the desired toolbox
+3. Use workbench_use_tool to execute tools from the opened toolbox
 
 Returns:
   JSON format:
@@ -123,7 +125,47 @@ Returns:
 Examples:
   - Use when: You want to see what toolboxes are available
   - Use when: You need to find the right toolbox for a task
-  - Use when: You want to check if a toolbox is already open`,
+  - Use when: You want to check if a toolbox is already open`
+      : `List all available toolboxes configured in the workbench.
+
+A toolbox is a named collection of MCP tools organized by purpose or domain.
+Each toolbox can contain tools from one or more MCP servers.
+
+This tool returns:
+- List of toolbox names with descriptions
+- Tool count for each toolbox
+- Whether each toolbox is currently open
+
+Use this tool to discover what toolboxes are available before opening one.
+
+Workflow with dynamic tool registration:
+1. Use this tool to list available toolboxes
+2. Use workbench_open_toolbox to open the desired toolbox
+3. Call dynamically registered tools directly by their prefixed names (e.g., filesystem_read_file)
+
+Returns:
+  JSON format:
+  {
+    "toolboxes": [
+      {
+        "name": string,           // Toolbox identifier
+        "description": string,    // What this toolbox is for
+        "tool_count": number,     // Number of tools available
+        "is_open": boolean        // Whether currently connected
+      }
+    ]
+  }
+
+Examples:
+  - Use when: You want to see what toolboxes are available
+  - Use when: You need to find the right toolbox for a task
+  - Use when: You want to check if a toolbox is already open`;
+
+    this.server.registerTool(
+      "workbench_list_toolboxes",
+      {
+        title: "List Available Toolboxes",
+        description: listToolboxesDescription,
         inputSchema: ListToolboxesInputSchema.shape,
         annotations: {
           readOnlyHint: true,
@@ -186,11 +228,49 @@ Examples:
     );
 
     // Tool 2: Open a toolbox
-    this.server.registerTool(
-      "workbench_open_toolbox",
-      {
-        title: "Open a Toolbox",
-        description: `Open a toolbox and register its tools on the workbench server.
+    // Description varies based on tool mode (proxy vs dynamic)
+    const openToolboxDescription = this.config.toolMode === 'proxy'
+      ? `Open a toolbox and discover its available tools.
+
+This tool connects to all MCP servers configured in the specified toolbox
+and retrieves their tool definitions. Once opened, you can use the tools
+via workbench_use_tool.
+
+Opening a toolbox:
+1. Connects to each MCP server in the toolbox
+2. Retrieves the list of available tools from each server
+3. Applies any tool filters specified in the configuration
+4. Returns tool list for use with workbench_use_tool
+
+The tool list includes complete schemas and metadata for each tool.
+Use workbench_use_tool to execute tools by their original names.
+
+If the toolbox is already open, returns the cached information.
+
+Args:
+  - toolbox_name: Name of the toolbox to open (from workbench_list_toolboxes)
+
+Returns:
+  JSON format:
+  {
+    "toolbox": string,              // Toolbox name
+    "description": string,          // Purpose description
+    "servers_connected": number,    // Number of MCP servers connected
+    "tools_registered": number,     // Number of tools available
+    "message": string               // Success message
+  }
+
+Examples:
+  - Use when: You need to access tools from a specific domain
+  - Use when: Starting work on a new task requiring specific toolsets
+  - After: Using workbench_list_toolboxes to find the right toolbox
+  - Next: Use workbench_use_tool to execute discovered tools
+
+Error Handling:
+  - Returns error if toolbox name doesn't exist
+  - Returns error if MCP servers fail to connect
+  - Provides connection details in error messages`
+      : `Open a toolbox and register its tools on the workbench server.
 
 This tool connects to all MCP servers configured in the specified toolbox,
 retrieves their tools, and dynamically registers them on the workbench server.
@@ -229,7 +309,13 @@ Examples:
 Error Handling:
   - Returns error if toolbox name doesn't exist
   - Returns error if MCP servers fail to connect
-  - Provides connection details in error messages`,
+  - Provides connection details in error messages`;
+
+    this.server.registerTool(
+      "workbench_open_toolbox",
+      {
+        title: "Open a Toolbox",
+        description: openToolboxDescription,
         inputSchema: OpenToolboxInputSchema.shape,
         annotations: {
           readOnlyHint: false,
@@ -370,17 +456,18 @@ Error Handling:
       }
     );
 
-    // Tool 4: Use a tool (legacy proxy mode) - only if enabled
-    if (this.config.enableLegacyProxy) {
+    // Tool 4: Use a tool (proxy mode) - only if toolMode is 'proxy'
+    if (this.config.toolMode === 'proxy') {
       this.server.registerTool(
         "workbench_use_tool",
         {
           title: "Use a Tool from Toolbox",
-          description: `Execute a tool from an opened toolbox (legacy proxy mode).
+          description: `Execute a tool from an opened toolbox (proxy mode).
 
-This tool provides backward compatibility for MCP clients that don't support
-dynamic tool registration. Modern clients should use the dynamically registered
-tools directly (prefixed with server name, e.g., 'filesystem_read_file').
+This tool is available when toolMode is set to 'proxy' in the configuration.
+It provides an alternative invocation method for MCP clients that don't support
+dynamic tool registration. When using dynamic mode, tools are registered directly
+with prefixed names (e.g., 'filesystem_read_file').
 
 How it works:
 1. Specify the toolbox name and tool name

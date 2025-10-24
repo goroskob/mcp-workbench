@@ -18,9 +18,9 @@ export async function loadConfig(configPath: string): Promise<WorkbenchConfig> {
       throw new Error("Configuration must have a 'toolboxes' object");
     }
 
-    // Validate enableLegacyProxy if provided
-    if (config.enableLegacyProxy !== undefined && typeof config.enableLegacyProxy !== "boolean") {
-      throw new Error("Configuration field 'enableLegacyProxy' must be a boolean");
+    // Validate toolMode if provided
+    if (config.toolMode !== undefined && config.toolMode !== 'dynamic' && config.toolMode !== 'proxy') {
+      throw new Error("Configuration field 'toolMode' must be either 'dynamic' or 'proxy'");
     }
 
     // Validate each toolbox

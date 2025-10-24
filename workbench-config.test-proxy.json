@@ -1,8 +1,8 @@
 {
-  "enableLegacyProxy": true,
+  "toolMode": "proxy",
   "toolboxes": {
     "test-memory": {
-      "description": "Test toolbox with memory server for legacy proxy testing",
+      "description": "Test toolbox with memory server for proxy mode testing",
       "mcpServers": {
         "memory": {
           "command": "npx",

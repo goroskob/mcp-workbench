@@ -1,6 +1,6 @@
 {
-  "_comment": "Set enableLegacyProxy to true to enable the workbench_use_tool proxy for MCP clients without dynamic tool registration support",
-  "enableLegacyProxy": false,
+  "_comment": "toolMode: 'dynamic' (default) = tools are dynamically registered with prefixed names, 'proxy' = tools accessed via workbench_use_tool",
+  "toolMode": "dynamic",
   "toolboxes": {
     "filesystem": {
       "description": "Tools for file system operations",
