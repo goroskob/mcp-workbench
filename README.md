@@ -157,15 +157,6 @@ Then use in your MCP client config:
 }
 ```
 
-### Option 3: From Source (For Development)
-
-```bash
-git clone https://github.com/hlibkoval/mcp-workbench.git
-cd mcp-workbench
-npm install
-npm run build
-```
-
 ## Configuration
 
 Create a `workbench-config.json` file:
@@ -181,7 +172,8 @@ Create a `workbench-config.json` file:
           "command": "node",
           "args": ["path/to/server.js"],
           "env": {
-            "API_KEY": "your-key-here"
+            "API_KEY": "${API_KEY}",
+            "DATABASE_URL": "${DATABASE_URL}"
           },
           "toolFilters": ["*"],
           "transport": "stdio"
@@ -205,6 +197,177 @@ Create a `workbench-config.json` file:
     - **env**: Environment variables for the server process (optional)
     - **toolFilters**: Array of tool names to include, or `["*"]` for all tools (optional, workbench extension)
     - **transport**: Transport type - currently only `"stdio"` is supported (optional, defaults to `"stdio"`, workbench extension)
+
+### Environment Variable Expansion
+
+MCP Workbench supports environment variable expansion in configuration files using `${VAR}` and `${VAR:-default}` syntax. This allows you to:
+
+- **Externalize credentials** - Keep API keys and passwords out of configuration files
+- **Share configurations** - Use the same config file across different machines and environments
+- **Support multiple environments** - Switch between dev/staging/prod using environment variables
+
+#### Syntax
+
+**Required variables** (no default):
+```json
+{
+  "env": {
+    "API_KEY": "${API_KEY}",
+    "DATABASE_PASSWORD": "${DATABASE_PASSWORD}"
+  }
+}
+```
+
+**Optional variables** (with defaults):
+```json
+{
+  "env": {
+    "LOG_LEVEL": "${LOG_LEVEL:-info}",
+    "PORT": "${PORT:-3000}",
+    "DEBUG_MODE": "${DEBUG_MODE:-false}"
+  }
+}
+```
+
+#### Where It Works
+
+Environment variable expansion is supported in all configuration fields:
+- **command**: `"${HOME}/tools/npx"`
+- **args**: `["-y", "server", "${DATABASE_PASSWORD}"]`
+- **env**: `{"API_KEY": "${API_KEY}"}`
+
+#### Example: Secure Credentials
+
+**Configuration file** (`workbench-config.json`):
+```json
+{
+  "toolboxes": {
+    "production": {
+      "description": "Production environment tools",
+      "mcpServers": {
+        "database": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-database"],
+          "env": {
+            "DATABASE_URL": "${DATABASE_URL}",
+            "API_KEY": "${API_KEY}",
+            "LOG_LEVEL": "${LOG_LEVEL:-info}"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**Environment variables**:
+```bash
+export API_KEY="your-secret-api-key"
+export DATABASE_URL="postgresql://user:pass@localhost/db"
+# LOG_LEVEL will use default "info" if not set
+
+export WORKBENCH_CONFIG=./workbench-config.json
+npx -y mcp-workbench
+```
+
+#### Example: Cross-Platform Paths
+
+**Configuration file**:
+```json
+{
+  "toolboxes": {
+    "local-dev": {
+      "description": "Local development tools",
+      "mcpServers": {
+        "filesystem": {
+          "command": "${HOME}/tools/npx",
+          "args": ["-y", "@modelcontextprotocol/server-filesystem", "${PROJECT_ROOT}/data"]
+        }
+      }
+    }
+  }
+}
+```
+
+**Environment variables**:
+```bash
+export HOME="/Users/yourname"  # macOS
+# or
+export HOME="/home/yourname"   # Linux
+
+export PROJECT_ROOT="$(pwd)"
+export WORKBENCH_CONFIG=./workbench-config.json
+npx -y mcp-workbench
+```
+
+#### Example: Multi-Environment Support
+
+**Single configuration file** works for dev, staging, and production:
+
+```json
+{
+  "toolboxes": {
+    "api-tools": {
+      "description": "API interaction tools",
+      "mcpServers": {
+        "api-client": {
+          "command": "npx",
+          "args": ["-y", "mcp-api-client"],
+          "env": {
+            "API_ENDPOINT": "${API_ENDPOINT}",
+            "AUTH_TOKEN": "${AUTH_TOKEN}",
+            "ENVIRONMENT": "${ENVIRONMENT}"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**Development environment**:
+```bash
+export API_ENDPOINT="http://localhost:3000/api"
+export AUTH_TOKEN="dev_token_123"
+export ENVIRONMENT="development"
+```
+
+**Production environment**:
+```bash
+export API_ENDPOINT="https://api.production.com"
+export AUTH_TOKEN="prod_token_secure"
+export ENVIRONMENT="production"
+```
+
+#### Error Handling
+
+If a required variable is missing, you'll get a clear error message:
+
+```
+Failed to load configuration from ./workbench-config.json:
+Environment variable expansion failed
+  Variable: API_KEY
+  Location: config.toolboxes.production.mcpServers.database.env.API_KEY
+  Reason: Variable is not set
+
+Set the environment variable before starting server:
+  export API_KEY=value
+```
+
+#### Important Notes
+
+- **Empty strings are valid**: `export VAR=""` uses empty string, `unset VAR` triggers error for required variables
+- **POSIX variable names**: Must be uppercase letters, digits, and underscores (e.g., `API_KEY`, `DATABASE_URL`)
+- **No nested expansion**: Default values are literal strings, no `${...}` in defaults
+- **Backward compatible**: Configurations without `${...}` patterns work unchanged
+
+#### Security Best Practices
+
+- **Never commit credentials** to version control
+- **Use environment variables** for all sensitive data (API keys, passwords, tokens)
+- **Share configuration files safely** - they contain no secrets when using `${VAR}` syntax
+- **Use different variables** for different environments (dev/staging/prod)
+- **Document required variables** in your project's README
 
 ## Usage
 
@@ -347,7 +510,7 @@ Open a toolbox and discover its tools.
   "description": "Tools for analyzing incidents",
   "servers_connected": 2,
   "tools_registered": 15,
-  "message": "Toolbox opened and tools registered with prefix 'toolboxname__servername_'"
+  "message": "Toolbox opened and tools registered with prefix 'toolboxname__servername__'"
 }
 
 // After opening, tools like 'incident-analysis__clickhouse__list_databases' appear
@@ -415,10 +578,10 @@ workbench_list_toolboxes()
 
 // 2. Open the toolbox you need
 workbench_open_toolbox({ toolbox_name: "data-analysis" })
-// This registers tools like 'postgres_query_database' in your MCP client
+// This registers tools like 'data-analysis__postgres__query_database' in your MCP client
 
 // 3. Call tools directly by their registered names
-postgres_query_database({ query: "SELECT * FROM users LIMIT 10" })
+data-analysis__postgres__query_database({ query: "SELECT * FROM users LIMIT 10" })
 
 // 4. Close when done (unregisters tools)
 workbench_close_toolbox({ toolbox_name: "data-analysis" })
@@ -497,7 +660,7 @@ Organize tools by environment:
 │  │                              │   │
 │  │  Dynamic Mode:               │   │
 │  │  + Registered downstream     │   │
-│  │    tools (server_toolname)   │   │
+│  │    tools (toolbox__server__toolname) │
 │  └──────────────────────────────┘   │
 │  ┌──────────────────────────────┐   │
 │  │  Client Manager              │   │

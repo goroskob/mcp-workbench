@@ -33,6 +33,10 @@ npm run clean
 
 This project uses automated GitHub Actions for releases and npm publishing.
 
+### Versioning Policy
+
+**Pre-1.0.0 (Incubating)**: This project uses **relaxed semver** while in incubation (versions < 1.0.0). Breaking changes may be introduced in any release during this phase. Once the project reaches 1.0.0, it will follow strict semantic versioning.
+
 ### Creating a New Release
 
 1. **Update the version** in [package.json](package.json):
@@ -91,7 +95,7 @@ The workbench acts as both an **MCP server** (exposes 3-4 meta-tools depending o
 The workbench supports two modes for invoking downstream tools, controlled by the `toolMode` configuration field:
 
 #### Dynamic Mode (default, `toolMode: "dynamic"`)
-When a toolbox is opened, downstream tools are **dynamically registered** on the workbench server with prefixed names (`{server}_{tool}`). This means:
+When a toolbox is opened, downstream tools are **dynamically registered** on the workbench server with prefixed names (`{toolbox}__{server}__{tool}`). This means:
 - Tools appear natively in the MCP client's tool list
 - No proxy layer needed - tools are called directly by name
 - Better IDE integration and discoverability
@@ -106,7 +110,7 @@ When a toolbox is opened, tool information is returned but tools are **not dynam
 - `workbench_open_toolbox` returns full tool list with schemas
 - **Workbench exposes 4 meta-tools**: `workbench_list_toolboxes`, `workbench_open_toolbox`, `workbench_close_toolbox`, `workbench_use_tool`
 
-**Tool naming is consistent in both modes**: Tools are always identified with the `{server}_{tool}` prefix to avoid conflicts.
+**Tool naming is consistent in both modes**: Tools are always identified with the `{toolbox}__{server}__{tool}` prefix to avoid conflicts.
 
 ### Core Components
 
@@ -124,13 +128,28 @@ When a toolbox is opened, tool information is returned but tools are **not dynam
 - Maintains runtime state of opened toolboxes with their connections and registered tools
 - Key methods:
   - `connectToServer()` creates `StdioClientTransport` for each downstream server
-  - `registerToolsOnServer()` registers downstream tools with `{server}_{tool}` prefix
+  - `registerToolsOnServer()` registers downstream tools with `{toolbox}__{server}__{tool}` prefix
   - `unregisterToolsFromServer()` removes tools when toolbox closes
 
 **src/config-loader.ts** - Configuration validator
 - Loads `workbench-config.json` (path from `WORKBENCH_CONFIG` env var)
+- Expands environment variables before validation using `env-expander.ts`
 - Validates toolbox structure at startup
 - Each toolbox contains an `mcpServers` object using standard MCP schema
+- Wraps expansion errors with configuration file context
+
+**src/env-expander.ts** - Environment variable expansion
+- Implements `${VAR}` and `${VAR:-default}` syntax matching Claude Code
+- Recursively expands variables in all configuration fields (command, args, env, etc.)
+- Validates POSIX-compliant variable names: `[A-Z_][A-Z0-9_]*`
+- Throws `EnvExpansionError` with variable name, JSON path, and resolution guidance
+- Pattern: `/\$\{([A-Z_][A-Z0-9_]*)(?::-(.*?))?\}/g`
+- Key functions:
+  - `expandString()` replaces `${VAR}` patterns in a single string
+  - `expandEnvVars()` recursively processes strings, objects, arrays, primitives
+  - `EnvExpansionError` provides structured error info with location and help text
+- Edge cases handled: unclosed braces, invalid names, empty strings, multi-line values
+- Backward compatible: configs without `${...}` patterns work unchanged
 
 **src/types.ts** - TypeScript type system
 - `WorkbenchConfig` - Configuration schema with optional `toolMode` field and `toolboxes` map
@@ -217,6 +236,65 @@ The server requires a `workbench-config.json` file with this structure:
 
 The `mcpServers` format matches the standard used by Claude Desktop and other MCP clients, making it easy to copy server configurations between tools.
 
+**Environment Variable Expansion Flow:**
+1. **Load**: Read raw JSON from `workbench-config.json`
+2. **Parse**: Parse JSON to JavaScript object
+3. **Expand**: Recursively expand `${VAR}` and `${VAR:-default}` patterns in all fields
+   - Pattern: `/\$\{([A-Z_][A-Z0-9_]*)(?::-(.*?))?\}/g`
+   - For required vars (`${VAR}`): Use `process.env[VAR]` or throw `EnvExpansionError`
+   - For optional vars (`${VAR:-default}`): Use `process.env[VAR]` or default value
+   - Empty string (`process.env[VAR] === ""`) is valid, distinct from unset
+4. **Validate**: Run Zod schema validation on expanded configuration
+5. **Use**: Pass validated config to workbench server
+
+**Example with expansion:**
+```json
+{
+  "toolboxes": {
+    "prod": {
+      "mcpServers": {
+        "api": {
+          "command": "${HOME}/tools/npx",
+          "args": ["-y", "api-server", "${DATABASE_URL}"],
+          "env": {
+            "API_KEY": "${API_KEY}",
+            "LOG_LEVEL": "${LOG_LEVEL:-info}"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+With environment variables:
+```bash
+export HOME="/Users/dev"
+export DATABASE_URL="postgresql://localhost/db"
+export API_KEY="secret123"
+# LOG_LEVEL unset, will use default "info"
+```
+
+Becomes (after expansion):
+```json
+{
+  "toolboxes": {
+    "prod": {
+      "mcpServers": {
+        "api": {
+          "command": "/Users/dev/tools/npx",
+          "args": ["-y", "api-server", "postgresql://localhost/db"],
+          "env": {
+            "API_KEY": "secret123",
+            "LOG_LEVEL": "info"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
 ## Key Design Patterns
 
 ### Lazy Connection Management
@@ -231,7 +309,7 @@ Connections are **not** created at server startup. They're created when `workben
 When `workbench_open_toolbox` is called:
 1. Connects to all downstream MCP servers
 2. Queries `tools/list` from each server
-3. Registers each tool on workbench server with prefixed name (`{toolbox}__{server}_{tool}`)
+3. Registers each tool on workbench server with prefixed name (`{toolbox}__{server}__{tool}`)
 4. Creates handler that delegates to downstream server via `client.callTool()`
 5. Sends `tool list changed` notification to MCP clients
 6. Returns `tools_registered` count
@@ -300,7 +378,7 @@ Recommended test servers (no auth required):
 4. Follow handler signature: `async (args: { [x: string]: any }) => ...`
 
 ### Tool Name Conflicts
-Tool names are **always prefixed** with toolbox and server name (`{toolbox}__{server}_{tool}`) in both modes to ensure:
+Tool names are **always prefixed** with toolbox and server name (`{toolbox}__{server}__{tool}`) in both modes to ensure:
 - No conflicts between toolboxes with duplicate servers
 - No conflicts between servers within a toolbox
 - Predictable, consistent naming
@@ -309,7 +387,7 @@ Tool names are **always prefixed** with toolbox and server name (`{toolbox}__{se
 **Implementation Details:**
 - Tool name generation uses `ClientManager.generateToolName(toolbox, server, tool)` utility method
 - Tool name parsing uses `ClientManager.parseToolName(registeredName)` to extract components
-- Format uses double underscore `__` between toolbox and server, single underscore `_` between server and tool
+- Format uses double underscore `__` consistently between all components (toolbox, server, and tool)
 
 **In dynamic mode**, prefixing happens during registration via `ClientManager.registerToolsOnServer()`. Each tool is registered with a handler that:
 1. Parses the registered tool name to extract toolbox, server, and original tool name
@@ -330,6 +408,8 @@ If you need different behavior, modify the `generateToolName()` and `parseToolNa
 ## Active Technologies
 - TypeScript 5.7.2 with ES2022 target, Node.js 18+ runtime + @modelcontextprotocol/sdk ^1.6.1, zod ^3.23.8 for validation (001-duplicate-tools-support)
 - In-memory state management (no persistent storage required) (001-duplicate-tools-support)
+- TypeScript 5.7.2, Node.js 18+ runtime + @modelcontextprotocol/sdk ^1.6.1, zod ^3.23.8 for validation (003-env-var-expansion)
+- N/A (configuration is file-based JSON, no persistent storage) (003-env-var-expansion)
 
 ## Recent Changes
 - 001-duplicate-tools-support: Added TypeScript 5.7.2 with ES2022 target, Node.js 18+ runtime + @modelcontextprotocol/sdk ^1.6.1, zod ^3.23.8 for validation

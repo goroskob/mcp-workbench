@@ -4,6 +4,7 @@
 
 import { readFile } from "fs/promises";
 import { WorkbenchConfig } from "./types.js";
+import { expandEnvVars, EnvExpansionError } from "./env-expander.js";
 
 /**
  * Load and validate workbench configuration from a JSON file
@@ -11,7 +12,18 @@ import { WorkbenchConfig } from "./types.js";
 export async function loadConfig(configPath: string): Promise<WorkbenchConfig> {
   try {
     const content = await readFile(configPath, "utf-8");
-    const config = JSON.parse(content) as WorkbenchConfig;
+    const rawConfig = JSON.parse(content);
+
+    // Expand environment variables before validation
+    let config: WorkbenchConfig;
+    try {
+      config = expandEnvVars(rawConfig, 'config') as WorkbenchConfig;
+    } catch (error) {
+      if (error instanceof EnvExpansionError) {
+        throw new Error(`Failed to load configuration from ${configPath}:\n${error.message}`);
+      }
+      throw error;
+    }
 
     // Basic validation
     if (!config.toolboxes || typeof config.toolboxes !== "object") {

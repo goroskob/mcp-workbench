@@ -1,46 +1,86 @@
 {
-  "_comment": "toolMode: 'dynamic' (default) = tools are dynamically registered with prefixed names, 'proxy' = tools accessed via workbench_use_tool",
+  "_comment": "Example workbench configuration showing environment variable expansion",
+  "_documentation": "See README.md for full documentation on toolMode and environment variable syntax",
   "toolMode": "dynamic",
   "toolboxes": {
-    "filesystem": {
-      "description": "Tools for file system operations",
+    "development": {
+      "description": "Development environment with local paths and debug settings",
       "mcpServers": {
         "filesystem": {
           "command": "npx",
-          "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
-          "toolFilters": ["*"],
-          "transport": "stdio"
+          "args": [
+            "-y",
+            "@modelcontextprotocol/server-filesystem",
+            "${PROJECT_ROOT}/data"
+          ],
+          "env": {
+            "LOG_LEVEL": "${LOG_LEVEL:-debug}",
+            "NODE_ENV": "development"
+          },
+          "toolFilters": ["*"]
+        },
+        "memory": {
+          "command": "${HOME}/tools/npx",
+          "args": ["-y", "@modelcontextprotocol/server-memory"],
+          "env": {
+            "MAX_SIZE": "${MAX_MEMORY_SIZE:-100000}",
+            "LOG_LEVEL": "${LOG_LEVEL:-debug}"
+          }
+        }
+      }
+    },
+    "production": {
+      "description": "Production environment with secure credentials (externalized via env vars)",
+      "mcpServers": {
+        "database": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-database"],
+          "env": {
+            "DATABASE_URL": "${DATABASE_URL}",
+            "DATABASE_PASSWORD": "${DATABASE_PASSWORD}",
+            "API_KEY": "${API_KEY}",
+            "LOG_LEVEL": "${LOG_LEVEL:-error}"
+          },
+          "toolFilters": ["*"]
+        },
+        "api-client": {
+          "command": "npx",
+          "args": ["-y", "mcp-api-client"],
+          "env": {
+            "API_ENDPOINT": "${API_ENDPOINT}",
+            "AUTH_TOKEN": "${AUTH_TOKEN}",
+            "TIMEOUT": "${REQUEST_TIMEOUT:-30000}",
+            "RETRY_ATTEMPTS": "${RETRY_ATTEMPTS:-3}"
+          }
+        }
+      }
+    },
+    "multi-environment": {
+      "description": "Toolbox that adapts to different environments (dev/staging/prod) via variables",
+      "mcpServers": {
+        "adaptive-service": {
+          "command": "npx",
+          "args": ["-y", "mcp-service"],
+          "env": {
+            "ENVIRONMENT": "${ENVIRONMENT}",
+            "API_ENDPOINT": "${API_ENDPOINT}",
+            "API_KEY": "${API_KEY}",
+            "LOG_LEVEL": "${LOG_LEVEL:-info}",
+            "DEBUG_MODE": "${DEBUG_MODE:-false}"
+          }
         }
       }
     },
     "github": {
-      "description": "Tools for GitHub repository management",
+      "description": "GitHub tools with secure token management",
       "mcpServers": {
         "github": {
           "command": "npx",
           "args": ["-y", "@modelcontextprotocol/server-github"],
           "env": {
-            "GITHUB_PERSONAL_ACCESS_TOKEN": "your-token-here"
+            "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
           },
-          "toolFilters": ["*"],
-          "transport": "stdio"
-        }
-      }
-    },
-    "data-analysis": {
-      "description": "Combined toolbox for data analysis with multiple sources",
-      "mcpServers": {
-        "postgres": {
-          "command": "npx",
-          "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost/mydb"],
-          "toolFilters": ["*"],
-          "transport": "stdio"
-        },
-        "sqlite": {
-          "command": "npx",
-          "args": ["-y", "@modelcontextprotocol/server-sqlite", "/path/to/database.db"],
-          "toolFilters": ["*"],
-          "transport": "stdio"
+          "toolFilters": ["*"]
         }
       }
     }
