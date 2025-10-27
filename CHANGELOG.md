@@ -57,6 +57,51 @@ If extending MCP Workbench:
 
 ---
 
+## [0.5.0] - 2025-10-27
+
+### Breaking Changes
+
+- **Tool Naming Format**: Changed from `{toolbox}__{server}_{tool}` to `{toolbox}__{server}__{tool}` for consistent double-underscore separators between all components
+  - **Migration required**: All tool invocations must be updated to use the new format
+  - **Incompatible change released as minor version**: This is an incompatible change released as v0.5.0 (minor bump) per maintainer decision, deviating from strict semantic versioning
+  - Old format: `main__filesystem_read_file` (mixed separators)
+  - New format: `main__filesystem__read_file` (consistent double underscores)
+  - Old format will be rejected with error message directing to documentation
+
+### Changed
+
+- Simplified `ClientManager.parseToolName()` to use consistent separator parsing with `split('__', 3)`
+- Updated all error messages to reference new tool name format with helpful hints
+- Updated all documentation with new naming convention examples
+
+### Added
+
+- Migration guide in README.md with before/after examples and checklist
+- Improved error messages with format hints: "Expected format: {toolbox}__{server}__{tool} (note: double underscores between all components)"
+
+### Migration Guide: v0.4.0 → v0.5.0
+
+**What Changed:**
+The separator between server name and tool name changed from single underscore (`_`) to double underscore (`__`).
+
+**Examples:**
+| Component | Old Format (v0.4.0) | New Format (v0.5.0) |
+|-----------|---------------------|---------------------|
+| Filesystem read | `dev__filesystem_read_file` | `dev__filesystem__read_file` |
+| Memory store | `prod__memory_store_value` | `prod__memory__store_value` |
+
+**Migration Checklist:**
+- [ ] Update all tool invocations to use double underscore before tool name
+- [ ] Update any custom tool name parsing logic in your client code
+- [ ] Test all tool calls with new format
+- [ ] Update client-side documentation/examples
+
+**Troubleshooting:**
+- **Error**: "Tool 'dev__filesystem_read_file' not found"
+- **Solution**: Update to new format `dev__filesystem__read_file` (double underscore before tool name)
+
+---
+
 ## [0.3.3] - 2025-01-XX
 
 ### Changed

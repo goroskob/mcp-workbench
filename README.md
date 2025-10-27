@@ -13,18 +13,81 @@ Instead of managing connections to multiple MCP servers manually, MCP Workbench 
 
 ### Two Invocation Modes
 
-- **Dynamic Mode (default)**: Tools are automatically registered on the workbench server and appear natively in your MCP client's tool list with prefixed names (e.g., `main__clickhouse_list_databases` where `main` is the toolbox name)
+- **Dynamic Mode (default)**: Tools are automatically registered on the workbench server and appear natively in your MCP client's tool list with prefixed names (e.g., `main__clickhouse__list_databases` where `main` is the toolbox name)
 - **Proxy Mode**: Tools are accessed via the `workbench_use_tool` meta-tool, designed for MCP clients that don't support dynamic tool registration
 
 ### Tool Naming Convention
 
-Tools are named using the pattern: `{toolbox}__{server}_{tool}`
+Tools are named using the pattern: `{toolbox}__{server}__{tool}` (note: consistent double underscores between all components)
 
 **Examples:**
-- Toolbox "dev", server "filesystem", tool "read_file" → `dev__filesystem_read_file`
-- Toolbox "prod", server "clickhouse", tool "query" → `prod__clickhouse_query`
+- Toolbox "dev", server "filesystem", tool "read_file" → `dev__filesystem__read_file`
+- Toolbox "prod", server "clickhouse", tool "query" → `prod__clickhouse__query`
 
-This naming allows multiple toolboxes to use the same MCP server without conflicts. For example, you can have both "dev" and "prod" toolboxes connecting to a "filesystem" server, and their tools (`dev__filesystem_read_file` vs `prod__filesystem_read_file`) will be uniquely addressable.
+This naming allows multiple toolboxes to use the same MCP server without conflicts. For example, you can have both "dev" and "prod" toolboxes connecting to a "filesystem" server, and their tools (`dev__filesystem__read_file` vs `prod__filesystem__read_file`) will be uniquely addressable.
+
+## Migration Guide: v0.4.0 → v0.5.0
+
+**⚠️ Breaking Change**: Tool naming format has changed in v0.5.0
+
+### What Changed
+
+The separator between server name and tool name changed from single underscore (`_`) to double underscore (`__`) for consistency.
+
+### Before/After Examples
+
+| Component | Old Format (v0.4.0) | New Format (v0.5.0) |
+|-----------|---------------------|---------------------|
+| Filesystem read | `dev__filesystem_read_file` | `dev__filesystem__read_file` |
+| Memory store | `prod__memory_store_value` | `prod__memory__store_value` |
+| Clickhouse query | `main__clickhouse_run_query` | `main__clickhouse__run_query` |
+
+### Migration Checklist
+
+- [ ] **Update all tool invocations** to use double underscore before tool name
+- [ ] **Update custom parsing logic** if you parse tool names in your client code
+- [ ] **Test all tool calls** with new format to verify functionality
+- [ ] **Update documentation** and examples in your codebase
+
+### Example Code Updates
+
+**Before (v0.4.0):**
+```javascript
+// Direct tool call (dynamic mode)
+client.callTool({ name: "dev__filesystem_read_file", arguments: {...} })
+
+// Proxy mode
+workbench_use_tool({
+  toolbox_name: "dev",
+  tool_name: "dev__filesystem_read_file",
+  arguments: {...}
+})
+```
+
+**After (v0.5.0):**
+```javascript
+// Direct tool call (dynamic mode)
+client.callTool({ name: "dev__filesystem__read_file", arguments: {...} })
+
+// Proxy mode
+workbench_use_tool({
+  toolbox_name: "dev",
+  tool_name: "dev__filesystem__read_file",
+  arguments: {...}
+})
+```
+
+### Troubleshooting
+
+**Error**: `"Tool 'dev__filesystem_read_file' not found"`
+**Solution**: Update to new format `dev__filesystem__read_file` (add double underscore before tool name)
+
+**Error**: `"Invalid tool name format '...' Expected format: {toolbox}__{server}__{tool}"`
+**Solution**: Ensure you're using double underscores (`__`) between all three components
+
+### Configuration Files
+
+**No changes required** to your `workbench-config.json` file! The configuration format remains the same - only the runtime tool names have changed.
 
 ## Installation
 
@@ -132,7 +195,7 @@ Create a `workbench-config.json` file:
 ### Configuration Options
 
 - **toolMode**: Tool invocation mode - `"dynamic"` (default) or `"proxy"` (optional, top-level)
-  - **dynamic**: Tools are automatically registered with prefixed names (e.g., `main__clickhouse_list_databases`)
+  - **dynamic**: Tools are automatically registered with prefixed names (e.g., `main__clickhouse__list_databases`)
   - **proxy**: Tools are accessed via `workbench_use_tool` meta-tool
 - **toolboxes**: Object mapping toolbox names to configurations
   - **description**: Human-readable purpose of the toolbox
@@ -259,7 +322,7 @@ Open a toolbox and discover its tools.
   "servers_connected": 2,
   "tools": [
     {
-      "name": "incident-analysis__clickhouse_list_databases",  // Toolbox and server prefixed
+      "name": "incident-analysis__clickhouse__list_databases",  // Toolbox and server prefixed
       "source_server": "clickhouse",
       "toolbox_name": "incident-analysis",
       "description": "[incident-analysis/clickhouse] List available databases",
@@ -287,7 +350,7 @@ Open a toolbox and discover its tools.
   "message": "Toolbox opened and tools registered with prefix 'toolboxname__servername_'"
 }
 
-// After opening, tools like 'incident-analysis__clickhouse_list_databases' appear
+// After opening, tools like 'incident-analysis__clickhouse__list_databases' appear
 // directly in your MCP client's tool list
 ```
 
@@ -299,7 +362,7 @@ Execute a tool from an opened toolbox. Only available when `toolMode: "proxy"`.
 // Input:
 {
   "toolbox_name": "incident-analysis",
-  "tool_name": "incident-analysis__clickhouse_list_databases",  // Toolbox and server prefixed
+  "tool_name": "incident-analysis__clickhouse__list_databases",  // Toolbox and server prefixed
   "arguments": {
     // tool-specific arguments
   }
@@ -336,7 +399,7 @@ workbench_open_toolbox({ toolbox_name: "data-analysis" })
 // 3. Use tools from the toolbox via workbench_use_tool
 workbench_use_tool({
   toolbox_name: "data-analysis",
-  tool_name: "data-analysis__postgres_query_database",  // Toolbox and server prefixed
+  tool_name: "data-analysis__postgres__query_database",  // Toolbox and server prefixed
   arguments: { query: "SELECT * FROM users LIMIT 10" }
 })
 
@@ -483,8 +546,8 @@ Example: filesystem_read_file
 
 **After (v0.4.0+):**
 ```
-{toolbox}__{server}_{tool}
-Example: main__filesystem_read_file
+{toolbox}__{server}__{tool}
+Example: main__filesystem__read_file
 ```
 
 **What You Need to Update:**
@@ -501,7 +564,7 @@ Example: main__filesystem_read_file
    // New (v0.4.0+)
    workbench_use_tool({
      toolbox_name: "mytools",
-     tool_name: "mytools__filesystem_read_file",  // ✅ New format
+     tool_name: "mytools__filesystem__read_file",  // ✅ New format
      arguments: { path: "test.txt" }
    })
    ```
@@ -511,7 +574,7 @@ Example: main__filesystem_read_file
 3. **Dynamic Mode**: Tools in your MCP client's tool list will now show with toolbox prefix
    ```
    Before: filesystem_read_file, memory_store
-   After:  main__filesystem_read_file, main__memory_store
+   After:  main__filesystem__read_file, main__memory__store
    ```
 
 **Benefits of the Change:**
@@ -546,8 +609,8 @@ Example: main__filesystem_read_file
 ```
 
 Tools available:
-- `dev__filesystem_read_file` → reads from `/tmp/dev`
-- `prod__filesystem_read_file` → reads from `/var/prod`
+- `dev__filesystem__read_file` → reads from `/tmp/dev`
+- `prod__filesystem__read_file` → reads from `/var/prod`
 
 Both can be used simultaneously without conflicts!
 
