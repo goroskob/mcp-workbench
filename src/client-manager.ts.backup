@@ -17,39 +17,46 @@ export class ClientManager {
 
   /**
    * Parse a registered tool name to extract toolbox, server, and original tool name
-   * Format: {toolbox}__{server}__{tool}
-   * Example: "dev__filesystem__read_file" => { toolbox: "dev", server: "filesystem", originalTool: "read_file" }
+   * Format: {toolbox}__{server}_{tool}
+   * Example: "dev__filesystem_read_file" => { toolbox: "dev", server: "filesystem", originalTool: "read_file" }
    */
   private parseToolName(registeredName: string): { toolbox: string; server: string; originalTool: string } | null {
-    // Split on double underscore, limit to 3 parts
-    const parts = registeredName.split('__', 3);
-
-    // Must have exactly 3 parts
-    if (parts.length !== 3) {
+    // Split on double underscore to separate toolbox from server+tool
+    const parts = registeredName.split('__');
+    if (parts.length !== 2) {
       return null; // Invalid format
     }
 
-    const [toolbox, server, originalTool] = parts;
+    const toolboxName = parts[0];
+    const serverAndTool = parts[1];
 
-    // All parts must be non-empty
-    if (!toolbox || !server || !originalTool) {
+    // Find the first underscore in server+tool portion
+    const firstUnderscoreIndex = serverAndTool.indexOf('_');
+    if (firstUnderscoreIndex === -1) {
+      return null; // Invalid format - no underscore between server and tool
+    }
+
+    const serverName = serverAndTool.substring(0, firstUnderscoreIndex);
+    const originalTool = serverAndTool.substring(firstUnderscoreIndex + 1);
+
+    if (!toolboxName || !serverName || !originalTool) {
       return null; // Empty components
     }
 
     return {
-      toolbox,
-      server,
-      originalTool
+      toolbox: toolboxName,
+      server: serverName,
+      originalTool: originalTool
     };
   }
 
   /**
    * Generate a registered tool name from toolbox, server, and original tool name
-   * Format: {toolbox}__{server}__{tool}
-   * Example: generateToolName("dev", "filesystem", "read_file") => "dev__filesystem__read_file"
+   * Format: {toolbox}__{server}_{tool}
+   * Example: generateToolName("dev", "filesystem", "read_file") => "dev__filesystem_read_file"
    */
   private generateToolName(toolboxName: string, serverName: string, originalToolName: string): string {
-    return `${toolboxName}__${serverName}__${originalToolName}`;
+    return `${toolboxName}__${serverName}_${originalToolName}`;
   }
 
   /**
@@ -297,7 +304,7 @@ export class ClientManager {
                 content: [
                   {
                     type: "text" as const,
-                    text: `Error: Invalid tool name format '${prefixedName}'. Expected format: {toolbox}__{server}__{tool} (note: double underscores between all components)`,
+                    text: `Error: Invalid tool name format '${prefixedName}'`,
                   },
                 ],
                 isError: true,

@@ -159,20 +159,19 @@ The workbench exposes 3-4 meta-tools depending on the configured `toolMode`:
 
 ### Tool Naming Convention
 
-When a toolbox is opened, downstream tools are registered with the format: `{toolbox}__{server}_{tool_name}`
+When a toolbox is opened, downstream tools are registered with the format: `{toolbox}__{server}__{tool_name}` (note: consistent double underscores between all components)
 
 **Example:**
 - Toolbox name: `dev`
 - Server name: `filesystem`
 - Original tool: `read_file`
-- Registered as: `dev__filesystem_read_file`
+- Registered as: `dev__filesystem__read_file`
 
 **Format Details:**
-- Double underscore `__` separates toolbox from server+tool
-- Single underscore `_` separates server from tool (unchanged)
+- Double underscore `__` separates all components (toolbox, server, tool)
 - Example with multiple toolboxes:
-  - `dev__filesystem_read_file` → delegates to dev toolbox's filesystem server
-  - `prod__filesystem_read_file` → delegates to prod toolbox's filesystem server
+  - `dev__filesystem__read_file` → delegates to dev toolbox's filesystem server
+  - `prod__filesystem__read_file` → delegates to prod toolbox's filesystem server
 
 This prefixing strategy:
 - Avoids name conflicts between toolboxes with duplicate servers
@@ -238,7 +237,7 @@ When `workbench_open_toolbox` is called:
 6. Returns `tools_registered` count
 
 When a registered tool is called:
-1. MCP client calls tool by prefixed name (e.g., `main__filesystem_read_file`)
+1. MCP client calls tool by prefixed name (e.g., `main__filesystem__read_file`)
 2. Workbench handler parses tool name to extract toolbox, server, and original tool name
 3. Dynamically looks up the toolbox and server connection
 4. Delegates to downstream server: `client.callTool({ name: "read_file", arguments })`
