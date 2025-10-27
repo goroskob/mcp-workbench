@@ -157,15 +157,6 @@ Then use in your MCP client config:
 }
 ```
 
-### Option 3: From Source (For Development)
-
-```bash
-git clone https://github.com/hlibkoval/mcp-workbench.git
-cd mcp-workbench
-npm install
-npm run build
-```
-
 ## Configuration
 
 Create a `workbench-config.json` file:
@@ -347,7 +338,7 @@ Open a toolbox and discover its tools.
   "description": "Tools for analyzing incidents",
   "servers_connected": 2,
   "tools_registered": 15,
-  "message": "Toolbox opened and tools registered with prefix 'toolboxname__servername_'"
+  "message": "Toolbox opened and tools registered with prefix 'toolboxname__servername__'"
 }
 
 // After opening, tools like 'incident-analysis__clickhouse__list_databases' appear
@@ -415,10 +406,10 @@ workbench_list_toolboxes()
 
 // 2. Open the toolbox you need
 workbench_open_toolbox({ toolbox_name: "data-analysis" })
-// This registers tools like 'postgres_query_database' in your MCP client
+// This registers tools like 'data-analysis__postgres__query_database' in your MCP client
 
 // 3. Call tools directly by their registered names
-postgres_query_database({ query: "SELECT * FROM users LIMIT 10" })
+data-analysis__postgres__query_database({ query: "SELECT * FROM users LIMIT 10" })
 
 // 4. Close when done (unregisters tools)
 workbench_close_toolbox({ toolbox_name: "data-analysis" })
@@ -497,7 +488,7 @@ Organize tools by environment:
 │  │                              │   │
 │  │  Dynamic Mode:               │   │
 │  │  + Registered downstream     │   │
-│  │    tools (server_toolname)   │   │
+│  │    tools (toolbox__server__toolname) │
 │  └──────────────────────────────┘   │
 │  ┌──────────────────────────────┐   │
 │  │  Client Manager              │   │
