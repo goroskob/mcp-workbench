@@ -62,16 +62,16 @@ This is a single project structure:
 
 ### Test Configuration for User Story 1
 
-- [ ] T011 [US1] Create tests/config-expansion/test-us1-credentials.json with `${API_KEY}` and `${DATABASE_PASSWORD}` references in env and args fields
-- [ ] T012 [US1] Document test procedure in tests/config-expansion/test-us1-credentials.md (set variables, run server, verify expansion, verify error when missing)
+- [X] T011 [US1] Create tests/config-expansion/test-us1-credentials.json with `${API_KEY}` and `${DATABASE_PASSWORD}` references in env and args fields
+- [X] T012 [US1] Document test procedure in tests/config-expansion/test-us1-credentials.md (set variables, run server, verify expansion, verify error when missing)
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Test expansion in `env` object values (FR-005) - verify `${API_KEY}` expands correctly
-- [ ] T014 [US1] Test expansion in `command` field (FR-003) - verify executable paths with variables work
-- [ ] T015 [US1] Test expansion in `args` array (FR-004) - verify `${DATABASE_PASSWORD}` in arguments works
-- [ ] T016 [US1] Test error message when required variable missing (FR-008) - verify clear error with variable name and location
-- [ ] T017 [US1] Test multiple variables in single config (acceptance scenario 3) - verify all expand correctly
+- [X] T013 [US1] Test expansion in `env` object values (FR-005) - verify `${API_KEY}` expands correctly
+- [X] T014 [US1] Test expansion in `command` field (FR-003) - verify executable paths with variables work
+- [X] T015 [US1] Test expansion in `args` array (FR-004) - verify `${DATABASE_PASSWORD}` in arguments works
+- [X] T016 [US1] Test error message when required variable missing (FR-008) - verify clear error with variable name and location
+- [X] T017 [US1] Test multiple variables in single config (acceptance scenario 3) - verify all expand correctly
 
 **Checkpoint**: User Story 1 complete - Required variable syntax (`${VAR}`) works for credentials in all config fields
 
