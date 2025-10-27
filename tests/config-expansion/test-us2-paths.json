@@ -1,0 +1,21 @@
+{
+  "toolboxes": {
+    "test-paths": {
+      "description": "Test environment variable expansion for cross-platform paths",
+      "mcpServers": {
+        "filesystem-server": {
+          "command": "${HOME}/tools/npx",
+          "args": [
+            "-y",
+            "@modelcontextprotocol/server-filesystem",
+            "${PROJECT_ROOT}/data"
+          ],
+          "env": {
+            "NODE_PATH": "${HOME}/.npm-global/lib/node_modules",
+            "CONFIG_PATH": "${PROJECT_ROOT}/config/settings.json"
+          }
+        }
+      }
+    }
+  }
+}

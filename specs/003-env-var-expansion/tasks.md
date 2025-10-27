@@ -85,15 +85,15 @@ This is a single project structure:
 
 ### Test Configuration for User Story 2
 
-- [ ] T018 [US2] Create tests/config-expansion/test-us2-paths.json with `${HOME}` and `${PROJECT_ROOT}` in command and args fields
-- [ ] T019 [US2] Document cross-platform test procedure in tests/config-expansion/test-us2-paths.md (test on macOS/Linux, verify path expansion)
+- [X] T018 [US2] Create tests/config-expansion/test-us2-paths.json with `${HOME}` and `${PROJECT_ROOT}` in command and args fields
+- [X] T019 [US2] Document cross-platform test procedure in tests/config-expansion/test-us2-paths.md (test on macOS/Linux, verify path expansion)
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Test path expansion in command field (acceptance scenario 1) - verify `${HOME}/tools/server.js` expands correctly
-- [ ] T021 [US2] Test path expansion in args array (acceptance scenario 2) - verify `${PROJECT_ROOT}/config.json` works
-- [ ] T022 [US2] Test special characters in path values (edge case) - verify paths with spaces, colons work correctly
-- [ ] T023 [US2] Test empty string vs unset variables (edge case) - verify `export VAR=""` vs `unset VAR` handled correctly
+- [X] T020 [US2] Test path expansion in command field (acceptance scenario 1) - verify `${HOME}/tools/server.js` expands correctly
+- [X] T021 [US2] Test path expansion in args array (acceptance scenario 2) - verify `${PROJECT_ROOT}/config.json` works
+- [X] T022 [US2] Test special characters in path values (edge case) - verify paths with spaces, colons work correctly
+- [X] T023 [US2] Test empty string vs unset variables (edge case) - verify `export VAR=""` vs `unset VAR` handled correctly
 
 **Checkpoint**: User Story 2 complete - Path variables work across different operating systems
 
