@@ -168,12 +168,12 @@ This is a single project structure:
 - [X] T045 [P] Add configuration examples to README.md showing `${VAR}` and `${VAR:-default}` usage
 - [X] T046 [P] Add error handling documentation to README.md with example error messages
 - [X] T047 [P] Add security best practices section to README.md (never commit credentials, use env vars)
-- [ ] T048 [P] Update CLAUDE.md with env-expander.ts architecture per quickstart.md Step 4
-- [ ] T049 [P] Update CLAUDE.md Configuration as Contract section with expansion flow
+- [X] T048 [P] Update CLAUDE.md with env-expander.ts architecture per quickstart.md Step 4
+- [X] T049 [P] Update CLAUDE.md Configuration as Contract section with expansion flow
 - [X] T050 [P] Add code comments in src/env-expander.ts explaining regex pattern and edge cases
-- [ ] T051 [P] Create comprehensive test matrix document in tests/config-expansion/TEST_MATRIX.md
-- [ ] T052 Performance validation - run benchmark from quickstart.md Step 6, verify < 10ms for typical configs
-- [ ] T053 Create example configuration in repository root showing env var usage patterns
+- [X] T051 [P] Create comprehensive test matrix document in tests/config-expansion/TEST_MATRIX.md
+- [X] T052 Performance validation - run benchmark from quickstart.md Step 6, verify < 10ms for typical configs
+- [X] T053 Create example configuration in repository root showing env var usage patterns
 
 **Checkpoint**: All documentation complete, feature ready for code review
 
