@@ -133,8 +133,23 @@ When a toolbox is opened, tool information is returned but tools are **not dynam
 
 **src/config-loader.ts** - Configuration validator
 - Loads `workbench-config.json` (path from `WORKBENCH_CONFIG` env var)
+- Expands environment variables before validation using `env-expander.ts`
 - Validates toolbox structure at startup
 - Each toolbox contains an `mcpServers` object using standard MCP schema
+- Wraps expansion errors with configuration file context
+
+**src/env-expander.ts** - Environment variable expansion
+- Implements `${VAR}` and `${VAR:-default}` syntax matching Claude Code
+- Recursively expands variables in all configuration fields (command, args, env, etc.)
+- Validates POSIX-compliant variable names: `[A-Z_][A-Z0-9_]*`
+- Throws `EnvExpansionError` with variable name, JSON path, and resolution guidance
+- Pattern: `/\$\{([A-Z_][A-Z0-9_]*)(?::-(.*?))?\}/g`
+- Key functions:
+  - `expandString()` replaces `${VAR}` patterns in a single string
+  - `expandEnvVars()` recursively processes strings, objects, arrays, primitives
+  - `EnvExpansionError` provides structured error info with location and help text
+- Edge cases handled: unclosed braces, invalid names, empty strings, multi-line values
+- Backward compatible: configs without `${...}` patterns work unchanged
 
 **src/types.ts** - TypeScript type system
 - `WorkbenchConfig` - Configuration schema with optional `toolMode` field and `toolboxes` map
@@ -220,6 +235,65 @@ The server requires a `workbench-config.json` file with this structure:
   - **transport**: Currently only `"stdio"` is implemented (HTTP/SSE planned)
 
 The `mcpServers` format matches the standard used by Claude Desktop and other MCP clients, making it easy to copy server configurations between tools.
+
+**Environment Variable Expansion Flow:**
+1. **Load**: Read raw JSON from `workbench-config.json`
+2. **Parse**: Parse JSON to JavaScript object
+3. **Expand**: Recursively expand `${VAR}` and `${VAR:-default}` patterns in all fields
+   - Pattern: `/\$\{([A-Z_][A-Z0-9_]*)(?::-(.*?))?\}/g`
+   - For required vars (`${VAR}`): Use `process.env[VAR]` or throw `EnvExpansionError`
+   - For optional vars (`${VAR:-default}`): Use `process.env[VAR]` or default value
+   - Empty string (`process.env[VAR] === ""`) is valid, distinct from unset
+4. **Validate**: Run Zod schema validation on expanded configuration
+5. **Use**: Pass validated config to workbench server
+
+**Example with expansion:**
+```json
+{
+  "toolboxes": {
+    "prod": {
+      "mcpServers": {
+        "api": {
+          "command": "${HOME}/tools/npx",
+          "args": ["-y", "api-server", "${DATABASE_URL}"],
+          "env": {
+            "API_KEY": "${API_KEY}",
+            "LOG_LEVEL": "${LOG_LEVEL:-info}"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+With environment variables:
+```bash
+export HOME="/Users/dev"
+export DATABASE_URL="postgresql://localhost/db"
+export API_KEY="secret123"
+# LOG_LEVEL unset, will use default "info"
+```
+
+Becomes (after expansion):
+```json
+{
+  "toolboxes": {
+    "prod": {
+      "mcpServers": {
+        "api": {
+          "command": "/Users/dev/tools/npx",
+          "args": ["-y", "api-server", "postgresql://localhost/db"],
+          "env": {
+            "API_KEY": "secret123",
+            "LOG_LEVEL": "info"
+          }
+        }
+      }
+    }
+  }
+}
+```
 
 ## Key Design Patterns
 

@@ -148,13 +148,13 @@ This is a single project structure:
 
 **Purpose**: Comprehensive testing of edge cases and error scenarios across all user stories
 
-- [ ] T037 [P] Test malformed syntax errors - verify `${VAR` (unclosed brace) produces clear error message
-- [ ] T038 [P] Test invalid variable names - verify `${123VAR}` and `${MY-VAR}` produce clear errors with naming rules
-- [ ] T039 [P] Test multiple variables in single field (FR-010) - verify `${HOST}:${PORT}` expands both variables
-- [ ] T040 [P] Test special characters in values - verify `export PASSWORD='p@$$w0rd!'` works correctly
-- [ ] T041 [P] Test multi-line values - verify environment variables with newlines (certificates) work
-- [ ] T042 [P] Test very long values - verify environment variables > 1KB work without performance issues
-- [ ] T043 [P] Test backward compatibility - verify existing configs without env vars still work unchanged
+- [X] T037 [P] Test malformed syntax errors - verify `${VAR` (unclosed brace) produces clear error message
+- [X] T038 [P] Test invalid variable names - verify `${123VAR}` and `${MY-VAR}` produce clear errors with naming rules
+- [X] T039 [P] Test multiple variables in single field (FR-010) - verify `${HOST}:${PORT}` expands both variables
+- [X] T040 [P] Test special characters in values - verify `export PASSWORD='p@$$w0rd!'` works correctly
+- [X] T041 [P] Test multi-line values - verify environment variables with newlines (certificates) work
+- [X] T042 [P] Test very long values - verify environment variables > 1KB work without performance issues
+- [X] T043 [P] Test backward compatibility - verify existing configs without env vars still work unchanged
 
 **Checkpoint**: All edge cases handled, error messages are clear and actionable
 
@@ -164,13 +164,13 @@ This is a single project structure:
 
 **Purpose**: User-facing and developer documentation updates
 
-- [ ] T044 [P] Update README.md with environment variable syntax section per quickstart.md Step 4
-- [ ] T045 [P] Add configuration examples to README.md showing `${VAR}` and `${VAR:-default}` usage
-- [ ] T046 [P] Add error handling documentation to README.md with example error messages
-- [ ] T047 [P] Add security best practices section to README.md (never commit credentials, use env vars)
+- [X] T044 [P] Update README.md with environment variable syntax section per quickstart.md Step 4
+- [X] T045 [P] Add configuration examples to README.md showing `${VAR}` and `${VAR:-default}` usage
+- [X] T046 [P] Add error handling documentation to README.md with example error messages
+- [X] T047 [P] Add security best practices section to README.md (never commit credentials, use env vars)
 - [ ] T048 [P] Update CLAUDE.md with env-expander.ts architecture per quickstart.md Step 4
 - [ ] T049 [P] Update CLAUDE.md Configuration as Contract section with expansion flow
-- [ ] T050 [P] Add code comments in src/env-expander.ts explaining regex pattern and edge cases
+- [X] T050 [P] Add code comments in src/env-expander.ts explaining regex pattern and edge cases
 - [ ] T051 [P] Create comprehensive test matrix document in tests/config-expansion/TEST_MATRIX.md
 - [ ] T052 Performance validation - run benchmark from quickstart.md Step 6, verify < 10ms for typical configs
 - [ ] T053 Create example configuration in repository root showing env var usage patterns
