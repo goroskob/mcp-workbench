@@ -57,6 +57,31 @@ If extending MCP Workbench:
 
 ---
 
+## [0.6.0] - 2025-10-27
+
+### Added
+
+- **Constitution Principle VI: Release Policy and Workflow** - New governance principle enforcing merge-first, tag-second workflow
+  - All releases MUST be created from `main` branch after PR merge
+  - Tags MUST NOT be created from feature branches before merging
+  - Includes release validation checklist for maintainers
+- **Automated Release Policy Enforcement** in GitHub Actions workflow
+  - Release workflow now verifies tag was created from `main` branch
+  - Fails with helpful error message if policy violated
+  - Uses git merge-base ancestry check for verification
+
+### Changed
+
+- Constitution updated from v1.2.0 to v1.3.0
+- Enhanced `.github/workflows/release.yml` with branch ancestry validation
+- Improved release process documentation
+
+### Rationale
+
+This release codifies lessons learned from v0.5.0 where the release tag was pushed from a feature branch before merging, creating temporary divergence between the published release and the main branch. The new policy and automated enforcement prevent this scenario and ensure all releases correspond to code that has been reviewed and merged to main.
+
+---
+
 ## [0.5.0] - 2025-10-27
 
 ### Breaking Changes
