@@ -14,6 +14,35 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history to check branch ancestry
+
+      - name: Verify release from main branch
+        run: |
+          # Get the commit SHA that the tag points to
+          TAG_COMMIT=$(git rev-list -n 1 ${{ github.ref }})
+
+          # Check if this commit is in the main branch
+          if ! git merge-base --is-ancestor $TAG_COMMIT origin/main; then
+            echo "❌ ERROR: Release tag must be created from main branch"
+            echo ""
+            echo "Current tag: ${{ github.ref_name }}"
+            echo "Tag commit: $TAG_COMMIT"
+            echo ""
+            echo "This commit is not in the main branch history."
+            echo "Please follow the release policy:"
+            echo "  1. Merge your PR to main first"
+            echo "  2. Switch to main: git checkout main && git pull"
+            echo "  3. Create tag from main: git tag v0.x.0"
+            echo "  4. Push tag: git push origin v0.x.0"
+            echo ""
+            echo "See constitution Principle VI for full policy."
+            exit 1
+          fi
+
+          echo "✅ Tag is properly created from main branch"
+          echo "Tag: ${{ github.ref_name }}"
+          echo "Commit: $TAG_COMMIT"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

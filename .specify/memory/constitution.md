@@ -1,21 +1,23 @@
 <!--
 Sync Impact Report:
-Version: 1.2.0 (Updated tool naming convention to use consistent double underscores)
+Version: 1.3.0 (Added release policy principle and enhanced development workflow)
 Modified Principles:
-  - Principle II (Tool Naming and Conflict Resolution) - Updated from {toolbox}__{server}_{tool} to {toolbox}__{server}__{tool}
-  - Principle III (Mode-Agnostic Tool Invocation) - Updated naming reference to {toolbox}__{server}__{tool}
-Added Sections: N/A
+  - Development Workflow section - Restructured and expanded with new Release Policy principle
+Added Sections:
+  - VI. Release Policy and Workflow - New principle governing release procedures
 Removed Sections: N/A
 Templates Requiring Updates:
-  ✅ plan-template.md - No changes needed (naming convention not hardcoded)
-  ✅ spec-template.md - No changes needed (naming convention not hardcoded)
-  ✅ tasks-template.md - No changes needed (naming convention not hardcoded)
-  ✅ README.md - Updated with new naming convention, migration guide, examples
-  ✅ CLAUDE.md - Updated with new naming convention, architecture details
-  ✅ CHANGELOG.md - Updated with v0.5.0 incompatible change documentation
+  ✅ plan-template.md - No changes needed (release policy not template-specific)
+  ✅ spec-template.md - No changes needed (release policy not template-specific)
+  ✅ tasks-template.md - No changes needed (release policy not template-specific)
+  ✅ README.md - No changes needed (release policy is governance, not user-facing)
+  ✅ CLAUDE.md - No changes needed (existing release workflow docs sufficient)
+  ✅ CHANGELOG.md - Up to date with v0.5.0
 Follow-up TODOs:
-  - Monitor for future changes to MCP SDK that might require protocol updates
+  - Consider adding GitHub branch protection rules for additional enforcement
+  ✅ Updated .github/workflows/release.yml with automated branch ancestry check
 Previous Versions:
+  - 1.2.0 (2025-10-27): Updated tool naming convention to use consistent double underscores
   - 1.1.0 (2025-10-27): Updated tool naming to support duplicate servers across toolboxes
   - 1.0.0 (2025-10-24): Initial constitution
 -->
@@ -92,6 +94,52 @@ All errors MUST include sufficient context for debugging: toolbox name, server n
 
 **Rationale**: Context-rich error handling enables rapid troubleshooting in complex multi-server scenarios while preventing cascading failures.
 
+### VI. Release Policy and Workflow
+
+All releases MUST follow a merge-first, tag-second workflow to ensure the main branch remains the single source of truth:
+
+**Mandatory Release Workflow:**
+1. **Feature Development**: Create feature branch from `main`
+2. **Pull Request**: Open PR against `main` with complete documentation updates
+3. **Code Review**: Ensure all core principles are satisfied and documentation is synchronized
+4. **Merge First**: Merge PR to `main` branch (squash or merge commit as appropriate)
+5. **Tag from Main**: Create version tag ONLY after merge, always from `main` branch
+6. **Push Tag**: Push tag to trigger automated release workflow
+
+**Prohibited Practices:**
+- MUST NOT tag from feature branches before merging
+- MUST NOT create releases that don't correspond to the tip of `main`
+- MUST NOT bypass PR review process for releases
+
+**Release Tag Format:**
+- MUST use semantic versioning: `v{MAJOR}.{MINOR}.{PATCH}`
+- MUST be annotated tags with release description
+- MUST be pushed to remote to trigger CI/CD release workflow
+
+**Automated Release Process:**
+When a version tag matching `v*` is pushed from `main`:
+1. GitHub Actions MUST build and test the code
+2. GitHub Actions MUST create a GitHub release with auto-generated notes
+3. GitHub Actions MUST publish to npm registry
+4. GitHub Actions MUST upload distribution artifacts
+
+**Version Bump Guidelines:**
+- **MAJOR**: Breaking changes to meta-tool schemas, configuration format, or tool naming convention
+- **MINOR**: New features, new configuration options, backward-compatible enhancements
+- **PATCH**: Bug fixes, documentation updates, internal refactoring, dependency updates
+
+**Release Validation Checklist:**
+Before pushing a release tag, verify:
+- [ ] All changes are merged to `main`
+- [ ] Version in `package.json` matches tag version
+- [ ] `CHANGELOG.md` contains entry for this version
+- [ ] Breaking changes are documented with migration guides
+- [ ] All documentation (README.md, CLAUDE.md) is up to date
+- [ ] CI/CD tests pass on `main` branch
+- [ ] Tag is created from latest `main` commit
+
+**Rationale**: The merge-first policy prevents divergence between published releases and the main branch, ensures all releases undergo code review, maintains clean git history, and prevents confusion about which code was actually released. This discipline is essential for maintaining trust in the published packages and enabling reliable rollbacks if needed.
+
 ## Quality Standards
 
 ### TypeScript Type Safety
@@ -145,19 +193,12 @@ The following changes MUST trigger corresponding documentation updates before me
 
 ## Development Workflow
 
-### Build and Release
+### Build and Development
 
 - TypeScript MUST be compiled before running (`npm run build`)
 - Development mode (`npm run dev`) uses tsx watch for hot-reload
-- Version updates MUST follow semantic versioning (MAJOR.MINOR.PATCH)
-- Releases MUST be triggered by pushing version tags (v*)
-- Automated CI/CD via GitHub Actions MUST build, test, and publish to npm
-
-### Version Bump Guidelines
-
-- **MAJOR**: Breaking changes to meta-tool schemas, configuration format, or tool naming convention
-- **MINOR**: New features (e.g., new transport types), new configuration options, backward-compatible enhancements
-- **PATCH**: Bug fixes, documentation updates, internal refactoring, dependency updates
+- Clean builds SHOULD use `npm run clean && npm run build`
+- Distribution artifacts are output to `dist/` directory
 
 ### Code Organization
 
@@ -168,16 +209,17 @@ The following changes MUST trigger corresponding documentation updates before me
 
 ### Commit and Branch Standards
 
-- Feature branches MUST follow pattern: `feature/descriptive-name`
+- Feature branches MUST follow pattern: `NNN-brief-description` where NNN is the spec number (e.g., `001-duplicate-tools-support`)
 - Bug fix branches MUST follow pattern: `fix/issue-description`
-- Commit messages MUST follow conventional commits format
-- Breaking changes MUST be clearly documented in commit messages and CHANGELOG
+- Commit messages MUST follow conventional commits format (`feat:`, `fix:`, `docs:`, etc.)
+- Breaking changes MUST use `feat!:` or `fix!:` and include `BREAKING CHANGE:` in commit body
+- Breaking changes MUST be clearly documented in commit messages and CHANGELOG.md
 
 ## Governance
 
 ### Amendment Process
 
-1. Proposed changes to this constitution MUST be documented in a GitHub issue
+1. Proposed changes to this constitution MUST be documented in a GitHub issue or discussion
 2. Changes affecting core principles REQUIRE discussion and consensus
 3. Version number MUST be updated following semantic versioning rules for constitutions:
    - **MAJOR**: Backward incompatible principle removals or redefinitions
@@ -204,4 +246,4 @@ When constitution is updated:
 5. Update CLAUDE.md if architectural principles change
 6. Update README.md if user-facing guidance changes
 
-**Version**: 1.2.0 | **Ratified**: 2025-10-24 | **Last Amended**: 2025-10-27
+**Version**: 1.3.0 | **Ratified**: 2025-10-24 | **Last Amended**: 2025-10-27
