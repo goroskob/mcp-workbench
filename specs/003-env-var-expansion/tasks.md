@@ -107,15 +107,15 @@ This is a single project structure:
 
 ### Test Configuration for User Story 3
 
-- [ ] T024 [US3] Create tests/config-expansion/test-us3-multienv.json with `${API_ENDPOINT}` in url field and env-specific variables
-- [ ] T025 [US3] Document multi-environment test procedure in tests/config-expansion/test-us3-multienv.md (test dev/prod environments)
+- [X] T024 [US3] Create tests/config-expansion/test-us3-multienv.json with `${API_ENDPOINT}` in url field and env-specific variables
+- [X] T025 [US3] Document multi-environment test procedure in tests/config-expansion/test-us3-multienv.md (test dev/prod environments)
 
 ### Implementation for User Story 3
 
-- [ ] T026 [US3] Test expansion in `url` field for HTTP servers (FR-006) - verify `${API_ENDPOINT}` expands in URLs
-- [ ] T027 [US3] Test expansion in `headers` object (FR-007) - verify authorization headers with `${AUTH_TOKEN}` work
-- [ ] T028 [US3] Test multiple variables controlling different aspects (acceptance scenario 3) - verify URLs, credentials, settings all expand
-- [ ] T029 [US3] Test environment switching without config changes (acceptance scenarios 1-2) - verify same config works with different variable values
+- [X] T026 [US3] Test expansion in `url` field for HTTP servers (FR-006) - verify `${API_ENDPOINT}` expands in URLs
+- [X] T027 [US3] Test expansion in `headers` object (FR-007) - verify authorization headers with `${AUTH_TOKEN}` work
+- [X] T028 [US3] Test multiple variables controlling different aspects (acceptance scenario 3) - verify URLs, credentials, settings all expand
+- [X] T029 [US3] Test environment switching without config changes (acceptance scenarios 1-2) - verify same config works with different variable values
 
 **Checkpoint**: User Story 3 complete - Multi-environment configurations work dynamically
 
