@@ -87,6 +87,12 @@ export class ClientManager {
           Object.assign(envVars, config.env);
         }
 
+        // Log connection attempt details for debugging
+        console.error(`[mcp-workbench] Connecting to server '${serverName}':`);
+        console.error(`  Command: ${config.command}`);
+        console.error(`  Args: ${JSON.stringify(config.args || [])}`);
+        console.error(`  Env vars: ${Object.keys(config.env || {}).join(", ") || "(none)"}`);
+
         transport = new StdioClientTransport({
           command: config.command,
           args: config.args || [],
@@ -105,6 +111,8 @@ export class ClientManager {
       const toolsResponse = await client.listTools();
       const tools = toolsResponse.tools || [];
 
+      console.error(`[mcp-workbench] Successfully connected to '${serverName}', found ${tools.length} tools`);
+
       // Apply tool filters
       let filteredTools = tools;
       if (config.toolFilters && !config.toolFilters.includes("*")) {
@@ -122,6 +130,11 @@ export class ClientManager {
         connected_at: new Date(),
       };
     } catch (error) {
+      // Provide more detailed error information
+      console.error(`[mcp-workbench] Connection failed for server '${serverName}':`);
+      console.error(`  Error: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`  Config: ${JSON.stringify({ command: config.command, args: config.args }, null, 2)}`);
+      
       throw new Error(
         `Failed to connect to MCP server '${serverName}': ${
           error instanceof Error ? error.message : String(error)
