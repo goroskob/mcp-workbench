@@ -16,6 +16,50 @@ export class ClientManager {
   private openedToolboxes: Map<string, OpenedToolbox> = new Map();
 
   /**
+   * Parse a registered tool name to extract toolbox, server, and original tool name
+   * Format: {toolbox}__{server}_{tool}
+   * Example: "dev__filesystem_read_file" => { toolbox: "dev", server: "filesystem", originalTool: "read_file" }
+   */
+  private parseToolName(registeredName: string): { toolbox: string; server: string; originalTool: string } | null {
+    // Split on double underscore to separate toolbox from server+tool
+    const parts = registeredName.split('__');
+    if (parts.length !== 2) {
+      return null; // Invalid format
+    }
+
+    const toolboxName = parts[0];
+    const serverAndTool = parts[1];
+
+    // Find the first underscore in server+tool portion
+    const firstUnderscoreIndex = serverAndTool.indexOf('_');
+    if (firstUnderscoreIndex === -1) {
+      return null; // Invalid format - no underscore between server and tool
+    }
+
+    const serverName = serverAndTool.substring(0, firstUnderscoreIndex);
+    const originalTool = serverAndTool.substring(firstUnderscoreIndex + 1);
+
+    if (!toolboxName || !serverName || !originalTool) {
+      return null; // Empty components
+    }
+
+    return {
+      toolbox: toolboxName,
+      server: serverName,
+      originalTool: originalTool
+    };
+  }
+
+  /**
+   * Generate a registered tool name from toolbox, server, and original tool name
+   * Format: {toolbox}__{server}_{tool}
+   * Example: generateToolName("dev", "filesystem", "read_file") => "dev__filesystem_read_file"
+   */
+  private generateToolName(toolboxName: string, serverName: string, originalToolName: string): string {
+    return `${toolboxName}__${serverName}_${originalToolName}`;
+  }
+
+  /**
    * Connect to an MCP server and retrieve its tools
    */
   private async connectToServer(
@@ -167,11 +211,12 @@ export class ClientManager {
 
     for (const [serverName, connection] of toolbox.connections) {
       for (const tool of connection.tools) {
-        const prefixedName = `${serverName}_${tool.name}`;
+        const prefixedName = this.generateToolName(toolbox.name, serverName, tool.name);
         tools.push({
           name: prefixedName,
           original_name: tool.name,
           server: serverName,
+          toolbox_name: toolbox.name,
           description: tool.description,
           title: tool.title,
         });
@@ -194,15 +239,15 @@ export class ClientManager {
 
     for (const [serverName, connection] of connections) {
       for (const tool of connection.tools) {
-        // Apply same prefix as dynamic mode (line 211)
-        const prefixedName = `${serverName}_${tool.name}`;
+        // Apply same prefix as dynamic mode - toolbox__server_tool
+        const prefixedName = this.generateToolName(toolboxName, serverName, tool.name);
 
         tools.push({
           ...tool,
           name: prefixedName,  // Prefixed name
           description: tool.description
-            ? `[${serverName}] ${tool.description}`
-            : `Tool from ${serverName} server`,
+            ? `[${toolboxName}/${serverName}] ${tool.description}`
+            : `Tool from ${toolboxName}/${serverName}`,
           source_server: serverName,
           toolbox_name: toolboxName,
           _meta: {
@@ -231,8 +276,8 @@ export class ClientManager {
 
     for (const [serverName, connection] of connections) {
       for (const tool of connection.tools) {
-        // Prefix tool name with server name to avoid conflicts
-        const prefixedName = `${serverName}_${tool.name}`;
+        // Prefix tool name with toolbox and server name to support duplicate servers across toolboxes
+        const prefixedName = this.generateToolName(toolboxName, serverName, tool.name);
 
         // Register tool on workbench server with a handler that delegates to downstream
         const registeredTool = mcpServer.registerTool(
@@ -240,8 +285,8 @@ export class ClientManager {
           {
             title: tool.title,
             description: tool.description
-              ? `[${serverName}] ${tool.description}`
-              : `Tool from ${serverName} server`,
+              ? `[${toolboxName}/${serverName}] ${tool.description}`
+              : `Tool from ${toolboxName}/${serverName}`,
             inputSchema: tool.inputSchema as any,
             annotations: tool.annotations,
             _meta: {
@@ -252,10 +297,52 @@ export class ClientManager {
             },
           },
           async (args: any) => {
-            // Delegate to the downstream server
+            // Parse the registered tool name to extract components
+            const parsed = this.parseToolName(prefixedName);
+            if (!parsed) {
+              return {
+                content: [
+                  {
+                    type: "text" as const,
+                    text: `Error: Invalid tool name format '${prefixedName}'`,
+                  },
+                ],
+                isError: true,
+              };
+            }
+
+            // Look up the toolbox
+            const targetToolbox = this.openedToolboxes.get(parsed.toolbox);
+            if (!targetToolbox) {
+              return {
+                content: [
+                  {
+                    type: "text" as const,
+                    text: `Error: Toolbox '${parsed.toolbox}' not found`,
+                  },
+                ],
+                isError: true,
+              };
+            }
+
+            // Look up the server connection
+            const targetConnection = targetToolbox.connections.get(parsed.server);
+            if (!targetConnection) {
+              return {
+                content: [
+                  {
+                    type: "text" as const,
+                    text: `Error: Server '${parsed.server}' not found in toolbox '${parsed.toolbox}'`,
+                  },
+                ],
+                isError: true,
+              };
+            }
+
+            // Delegate to the downstream server using original tool name
             try {
-              const result = await connection.client.callTool({
-                name: tool.name, // Use original name for downstream call
+              const result = await targetConnection.client.callTool({
+                name: parsed.originalTool,
                 arguments: args,
               });
               return result;
@@ -264,7 +351,7 @@ export class ClientManager {
                 content: [
                   {
                     type: "text" as const,
-                    text: `Error calling tool '${tool.name}' on server '${serverName}': ${
+                    text: `[${parsed.toolbox}/${parsed.server}/${parsed.originalTool}] Error: ${
                       error instanceof Error ? error.message : String(error)
                     }`,
                   },

@@ -1,0 +1,192 @@
+{
+  "$schema": "https://spec.modelcontextprotocol.io/schemas/tool-schema.json",
+  "description": "MCP tool contracts for MCP Workbench - no changes to meta-tool schemas for this feature",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "workbench_list_toolboxes",
+      "description": "List all available toolboxes configured in the workbench (unchanged)",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "toolboxes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "description": { "type": "string" },
+                "tool_count": { "type": "number" },
+                "is_open": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "workbench_open_toolbox",
+      "description": "Open a toolbox and register its tools (unchanged behavior, enhanced to support duplicate servers)",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "toolbox_name": {
+            "type": "string",
+            "description": "Name of the toolbox to open"
+          }
+        },
+        "required": ["toolbox_name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "toolbox": { "type": "string" },
+          "description": { "type": "string" },
+          "servers_connected": { "type": "number" },
+          "tools_registered": {
+            "type": "number",
+            "description": "Number of tools registered (dynamic mode)"
+          },
+          "tools": {
+            "type": "array",
+            "description": "Full tool list with schemas (proxy mode only)",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Tool name in {toolbox}__{server}_{tool} format (CHANGED)"
+                },
+                "source_server": { "type": "string" },
+                "toolbox_name": { "type": "string" },
+                "description": { "type": "string" },
+                "inputSchema": { "type": "object" }
+              }
+            }
+          }
+        }
+      },
+      "notes": [
+        "Tool names in 'tools' array now use {toolbox}__{server}_{tool} format (previously {server}_{tool})",
+        "Supports opening multiple toolboxes with duplicate server configurations",
+        "Each toolbox maintains independent server connections"
+      ]
+    },
+    {
+      "name": "workbench_close_toolbox",
+      "description": "Close a toolbox and unregister its tools (unchanged behavior, enhanced isolation)",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "toolbox_name": {
+            "type": "string",
+            "description": "Name of the toolbox to close"
+          }
+        },
+        "required": ["toolbox_name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "toolbox": { "type": "string" },
+          "tools_unregistered": { "type": "number" },
+          "servers_disconnected": { "type": "number" }
+        }
+      },
+      "notes": [
+        "Unregisters only this toolbox's tools, not duplicate tools from other toolboxes",
+        "Closes only this toolbox's server connections, leaving duplicates in other toolboxes active"
+      ]
+    },
+    {
+      "name": "workbench_use_tool",
+      "description": "Invoke a tool from an opened toolbox (proxy mode only) - tool name format updated",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "toolbox_name": {
+            "type": "string",
+            "description": "Name of the toolbox containing the tool"
+          },
+          "tool_name": {
+            "type": "string",
+            "description": "Tool name in {toolbox}__{server}_{tool} format (CHANGED)"
+          },
+          "arguments": {
+            "type": "object",
+            "description": "Arguments to pass to the tool"
+          }
+        },
+        "required": ["toolbox_name", "tool_name"]
+      },
+      "outputSchema": {
+        "description": "Proxied response from the underlying tool"
+      },
+      "notes": [
+        "tool_name must use {toolbox}__{server}_{tool} format (previously {server}_{tool})",
+        "toolbox_name must match the toolbox prefix in tool_name for validation"
+      ]
+    }
+  ],
+  "dynamically_registered_tools": {
+    "description": "Tools from downstream MCP servers are dynamically registered when toolboxes are opened",
+    "naming_convention": {
+      "format": "{toolbox}__{server}_{tool}",
+      "previous_format": "{server}_{tool}",
+      "change_rationale": "Enable multiple toolboxes with duplicate servers - toolbox prefix ensures unique names",
+      "examples": [
+        {
+          "toolbox": "dev",
+          "server": "filesystem",
+          "original_tool": "read_file",
+          "registered_name": "dev__filesystem_read_file"
+        },
+        {
+          "toolbox": "prod",
+          "server": "filesystem",
+          "original_tool": "read_file",
+          "registered_name": "prod__filesystem_read_file"
+        },
+        {
+          "toolbox": "main",
+          "server": "memory",
+          "original_tool": "store",
+          "registered_name": "main__memory_store"
+        }
+      ]
+    },
+    "tool_metadata": {
+      "description": "Tool descriptions are prefixed to indicate source",
+      "format": "[{toolbox}/{server}] {original_description}",
+      "examples": [
+        {
+          "original": "Read a file from the filesystem",
+          "enhanced": "[dev/filesystem] Read a file from the filesystem"
+        },
+        {
+          "original": "Store a value in memory",
+          "enhanced": "[main/memory] Store a value in memory"
+        }
+      ]
+    }
+  },
+  "breaking_changes": [
+    {
+      "type": "naming_convention",
+      "old": "{server}_{tool}",
+      "new": "{toolbox}__{server}_{tool}",
+      "impact": "All MCP clients must update tool invocations to include toolbox prefix",
+      "migration": "Prepend toolbox name with double underscore to existing tool names (e.g., 'filesystem_read' becomes 'main__filesystem_read' if toolbox is named 'main')"
+    }
+  ],
+  "backward_compatibility": {
+    "configuration": "No changes to workbench-config.json schema - fully backward compatible",
+    "meta_tools": "workbench_list_toolboxes, workbench_open_toolbox, workbench_close_toolbox unchanged in schema",
+    "tool_names": "NOT backward compatible - all tools will use new naming format even for single toolbox"
+  }
+}

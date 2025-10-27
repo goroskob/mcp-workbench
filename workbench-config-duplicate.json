@@ -1,0 +1,44 @@
+{
+  "toolMode": "dynamic",
+  "toolboxes": {
+    "dev": {
+      "description": "Development environment toolbox",
+      "mcpServers": {
+        "memory": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-memory"],
+          "toolFilters": ["*"],
+          "transport": "stdio"
+        }
+      }
+    },
+    "prod": {
+      "description": "Production environment toolbox",
+      "mcpServers": {
+        "memory": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-memory"],
+          "toolFilters": ["*"],
+          "transport": "stdio"
+        }
+      }
+    },
+    "testing": {
+      "description": "Testing environment toolbox with multiple servers",
+      "mcpServers": {
+        "memory": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-memory"],
+          "toolFilters": ["*"],
+          "transport": "stdio"
+        },
+        "memory-secondary": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-memory"],
+          "toolFilters": ["*"],
+          "transport": "stdio"
+        }
+      }
+    }
+  }
+}
