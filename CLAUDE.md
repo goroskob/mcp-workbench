@@ -159,16 +159,25 @@ The workbench exposes 3-4 meta-tools depending on the configured `toolMode`:
 
 ### Tool Naming Convention
 
-When a toolbox is opened, downstream tools are registered with the format: `{server}_{tool_name}`
+When a toolbox is opened, downstream tools are registered with the format: `{toolbox}__{server}_{tool_name}`
 
 **Example:**
+- Toolbox name: `dev`
 - Server name: `filesystem`
 - Original tool: `read_file`
-- Registered as: `filesystem_read_file`
+- Registered as: `dev__filesystem_read_file`
+
+**Format Details:**
+- Double underscore `__` separates toolbox from server+tool
+- Single underscore `_` separates server from tool (unchanged)
+- Example with multiple toolboxes:
+  - `dev__filesystem_read_file` → delegates to dev toolbox's filesystem server
+  - `prod__filesystem_read_file` → delegates to prod toolbox's filesystem server
 
 This prefixing strategy:
-- Avoids name conflicts between servers
-- Makes tool origin clear
+- Avoids name conflicts between toolboxes with duplicate servers
+- Makes tool origin clear (toolbox and server)
+- Enables multiple instances of the same server in different toolboxes
 - Provides consistent, predictable naming
 
 ## Configuration Format
@@ -223,16 +232,17 @@ Connections are **not** created at server startup. They're created when `workben
 When `workbench_open_toolbox` is called:
 1. Connects to all downstream MCP servers
 2. Queries `tools/list` from each server
-3. Registers each tool on workbench server with prefixed name (`{server}_{tool}`)
+3. Registers each tool on workbench server with prefixed name (`{toolbox}__{server}_{tool}`)
 4. Creates handler that delegates to downstream server via `client.callTool()`
 5. Sends `tool list changed` notification to MCP clients
 6. Returns `tools_registered` count
 
 When a registered tool is called:
-1. MCP client calls tool by prefixed name (e.g., `filesystem_read_file`)
-2. Workbench handler extracts original tool name from metadata
-3. Delegates to downstream server: `client.callTool({ name: "read_file", arguments })`
-4. Returns downstream response directly
+1. MCP client calls tool by prefixed name (e.g., `main__filesystem_read_file`)
+2. Workbench handler parses tool name to extract toolbox, server, and original tool name
+3. Dynamically looks up the toolbox and server connection
+4. Delegates to downstream server: `client.callTool({ name: "read_file", arguments })`
+5. Returns downstream response directly
 
 When `workbench_close_toolbox` is called:
 1. Calls `.remove()` on each registered tool
@@ -291,16 +301,25 @@ Recommended test servers (no auth required):
 4. Follow handler signature: `async (args: { [x: string]: any }) => ...`
 
 ### Tool Name Conflicts
-Tool names are **always prefixed** with server name (`{server}_{tool}`) in both modes to ensure:
-- No conflicts between servers
+Tool names are **always prefixed** with toolbox and server name (`{toolbox}__{server}_{tool}`) in both modes to ensure:
+- No conflicts between toolboxes with duplicate servers
+- No conflicts between servers within a toolbox
 - Predictable, consistent naming
-- Clear tool origin
+- Clear tool origin (both toolbox and server)
 
-**In dynamic mode**, this prefixing happens during registration via `ClientManager.registerToolsOnServer()` in [src/client-manager.ts:224](src/client-manager.ts#L224).
+**Implementation Details:**
+- Tool name generation uses `ClientManager.generateToolName(toolbox, server, tool)` utility method
+- Tool name parsing uses `ClientManager.parseToolName(registeredName)` to extract components
+- Format uses double underscore `__` between toolbox and server, single underscore `_` between server and tool
 
-**In proxy mode**, this prefixing happens when building the tool list via `ClientManager.getToolsFromConnections()` in [src/client-manager.ts:188](src/client-manager.ts#L188).
+**In dynamic mode**, prefixing happens during registration via `ClientManager.registerToolsOnServer()`. Each tool is registered with a handler that:
+1. Parses the registered tool name to extract toolbox, server, and original tool name
+2. Dynamically looks up the toolbox and server connection at invocation time
+3. Delegates to the downstream server using the original tool name
 
-If you need different behavior, modify these methods.
+**In proxy mode**, prefixing happens when building the tool list via `ClientManager.getToolsFromConnections()`.
+
+If you need different behavior, modify the `generateToolName()` and `parseToolName()` methods in [src/client-manager.ts](src/client-manager.ts).
 
 ## TypeScript Notes
 
@@ -308,3 +327,10 @@ If you need different behavior, modify these methods.
 - Using ES2022 target with Node16 module resolution
 - Tool handler type casting: `const params = args as InputType;` due to SDK signature
 - Type assertion `as const` used for `type: "text"` to satisfy SDK's discriminated unions
+
+## Active Technologies
+- TypeScript 5.7.2 with ES2022 target, Node.js 18+ runtime + @modelcontextprotocol/sdk ^1.6.1, zod ^3.23.8 for validation (001-duplicate-tools-support)
+- In-memory state management (no persistent storage required) (001-duplicate-tools-support)
+
+## Recent Changes
+- 001-duplicate-tools-support: Added TypeScript 5.7.2 with ES2022 target, Node.js 18+ runtime + @modelcontextprotocol/sdk ^1.6.1, zod ^3.23.8 for validation

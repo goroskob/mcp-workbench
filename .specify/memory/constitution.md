@@ -1,23 +1,25 @@
 <!--
 Sync Impact Report:
-Version: 1.0.0 (Initial constitution with mandatory documentation update requirements)
-Modified Principles: N/A (initial version)
-Added Sections:
-  - Core Principles (5 principles)
-  - Quality Standards (TypeScript, Documentation, Mandatory Updates, Testing)
-  - Development Workflow
-  - Governance
+Version: 1.1.0 (Updated tool naming convention to support duplicate servers across toolboxes)
+Modified Principles:
+  - Principle II (Tool Naming and Conflict Resolution) - Updated from {server}_{tool} to {toolbox}__{server}_{tool}
+  - Principle III (Mode-Agnostic Tool Invocation) - Updated naming reference to {toolbox}__{server}_{tool}
+Added Sections: N/A
 Removed Sections: N/A
 Templates Requiring Updates:
-  ✅ plan-template.md - Constitution Check section aligned
-  ✅ spec-template.md - Requirements structure compatible
-  ✅ tasks-template.md - Task organization matches principles
-  ⚠ README.md - Should be reviewed for consistency with documentation mandate
-  ⚠ CLAUDE.md - Should be reviewed for consistency with documentation mandate
+  ✅ plan-template.md - No changes needed (naming convention not hardcoded)
+  ✅ spec-template.md - No changes needed (naming convention not hardcoded)
+  ✅ tasks-template.md - No changes needed (naming convention not hardcoded)
+  ✅ README.md - Updated with new naming convention, migration guide, examples
+  ✅ CLAUDE.md - Updated with new naming convention, architecture details
+  ✅ CHANGELOG.md - Created with breaking change documentation
+  ✅ TESTING.md - Created with comprehensive testing guide
 Follow-up TODOs:
   - Monitor for future changes to MCP SDK that might require protocol updates
-  - Review tool naming convention if conflicts emerge in practice
-  - Validate that README.md and CLAUDE.md are kept in sync per new mandate
+  - Validate manual testing scenarios (T045-T053) once MCP client is available
+  - Update version to 1.0.0 (MAJOR) due to breaking change in tool naming
+Previous Versions:
+  - 1.0.0 (2025-10-24): Initial constitution
 -->
 
 # MCP Workbench Constitution
@@ -38,14 +40,20 @@ The MCP Workbench is a meta-MCP server that MUST act as both an MCP server (expo
 
 ### II. Tool Naming and Conflict Resolution
 
-All downstream tools MUST be prefixed with their source server name using the pattern `{server}_{tool}` to prevent naming conflicts:
+All downstream tools MUST be prefixed with both their toolbox and source server name using the pattern `{toolbox}__{server}_{tool}` to prevent naming conflicts:
 
-- Server-prefixed naming is MANDATORY in both dynamic and proxy modes
+- Toolbox and server-prefixed naming is MANDATORY in both dynamic and proxy modes
+- Double underscore `__` MUST separate toolbox from server+tool
+- Single underscore `_` MUST separate server from tool (unchanged from previous pattern)
 - Tool names MUST be deterministic and predictable
 - Original tool names MUST be preserved in metadata for delegation
-- Tool descriptions MUST be prefixed with `[server]` to indicate origin
+- Tool descriptions MUST be prefixed with `[toolbox/server]` to indicate origin
 
-**Rationale**: Consistent prefixing prevents tool name collisions across multiple MCP servers while maintaining clarity about tool provenance and enabling reliable delegation.
+**Examples**:
+- Toolbox "dev", server "filesystem", tool "read_file" → `dev__filesystem_read_file`
+- Toolbox "prod", server "filesystem", tool "read_file" → `prod__filesystem_read_file`
+
+**Rationale**: Three-level naming (toolbox + server + tool) prevents conflicts between duplicate MCP server instances across multiple toolboxes while maintaining clarity about tool provenance. This enables multiple toolboxes to use the same MCP server without naming collisions, supporting development/production isolation and multi-environment workflows.
 
 ### III. Mode-Agnostic Tool Invocation
 
@@ -55,7 +63,7 @@ The workbench MUST support two invocation modes with identical tool naming but d
 - **Proxy Mode**: Tools returned with full schemas but not registered; MCP clients invoke via `workbench_use_tool` meta-tool; designed for clients without dynamic registration support
 
 Both modes MUST:
-- Use identical `{server}_{tool}` naming convention
+- Use identical `{toolbox}__{server}_{tool}` naming convention
 - Delegate to downstream servers using original tool names
 - Return identical results for equivalent operations
 - Apply identical tool filters from configuration
@@ -199,4 +207,4 @@ When constitution is updated:
 5. Update CLAUDE.md if architectural principles change
 6. Update README.md if user-facing guidance changes
 
-**Version**: 1.0.0 | **Ratified**: 2025-10-24 | **Last Amended**: 2025-10-24
+**Version**: 1.1.0 | **Ratified**: 2025-10-24 | **Last Amended**: 2025-10-27

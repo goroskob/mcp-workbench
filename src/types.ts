@@ -73,12 +73,14 @@ export interface ToolboxSummary {
  * Information about a registered tool
  */
 export interface RegisteredToolInfo {
-  /** Prefixed tool name (e.g., "filesystem_read_file") */
+  /** Prefixed tool name (e.g., "dev__filesystem_read_file") */
   name: string;
   /** Original tool name from downstream server (e.g., "read_file") */
   original_name: string;
   /** Source server name (e.g., "filesystem") */
   server: string;
+  /** Toolbox name (e.g., "dev") */
+  toolbox_name: string;
   /** Tool description */
   description?: string;
   /** Tool title */

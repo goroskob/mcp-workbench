@@ -13,8 +13,18 @@ Instead of managing connections to multiple MCP servers manually, MCP Workbench 
 
 ### Two Invocation Modes
 
-- **Dynamic Mode (default)**: Tools are automatically registered on the workbench server and appear natively in your MCP client's tool list with prefixed names (e.g., `clickhouse_list_databases`)
+- **Dynamic Mode (default)**: Tools are automatically registered on the workbench server and appear natively in your MCP client's tool list with prefixed names (e.g., `main__clickhouse_list_databases` where `main` is the toolbox name)
 - **Proxy Mode**: Tools are accessed via the `workbench_use_tool` meta-tool, designed for MCP clients that don't support dynamic tool registration
+
+### Tool Naming Convention
+
+Tools are named using the pattern: `{toolbox}__{server}_{tool}`
+
+**Examples:**
+- Toolbox "dev", server "filesystem", tool "read_file" → `dev__filesystem_read_file`
+- Toolbox "prod", server "clickhouse", tool "query" → `prod__clickhouse_query`
+
+This naming allows multiple toolboxes to use the same MCP server without conflicts. For example, you can have both "dev" and "prod" toolboxes connecting to a "filesystem" server, and their tools (`dev__filesystem_read_file` vs `prod__filesystem_read_file`) will be uniquely addressable.
 
 ## Installation
 
@@ -122,7 +132,7 @@ Create a `workbench-config.json` file:
 ### Configuration Options
 
 - **toolMode**: Tool invocation mode - `"dynamic"` (default) or `"proxy"` (optional, top-level)
-  - **dynamic**: Tools are automatically registered with prefixed names (e.g., `clickhouse_list_databases`)
+  - **dynamic**: Tools are automatically registered with prefixed names (e.g., `main__clickhouse_list_databases`)
   - **proxy**: Tools are accessed via `workbench_use_tool` meta-tool
 - **toolboxes**: Object mapping toolbox names to configurations
   - **description**: Human-readable purpose of the toolbox
@@ -249,9 +259,10 @@ Open a toolbox and discover its tools.
   "servers_connected": 2,
   "tools": [
     {
-      "name": "clickhouse_list_databases",  // Server-prefixed name
+      "name": "incident-analysis__clickhouse_list_databases",  // Toolbox and server prefixed
       "source_server": "clickhouse",
-      "description": "[clickhouse] List available databases",
+      "toolbox_name": "incident-analysis",
+      "description": "[incident-analysis/clickhouse] List available databases",
       "inputSchema": {...},
       "annotations": {...}
     },
@@ -273,10 +284,10 @@ Open a toolbox and discover its tools.
   "description": "Tools for analyzing incidents",
   "servers_connected": 2,
   "tools_registered": 15,
-  "message": "Toolbox opened and tools registered with prefix 'servername_'"
+  "message": "Toolbox opened and tools registered with prefix 'toolboxname__servername_'"
 }
 
-// After opening, tools like 'clickhouse_list_databases' appear
+// After opening, tools like 'incident-analysis__clickhouse_list_databases' appear
 // directly in your MCP client's tool list
 ```
 
@@ -288,7 +299,7 @@ Execute a tool from an opened toolbox. Only available when `toolMode: "proxy"`.
 // Input:
 {
   "toolbox_name": "incident-analysis",
-  "tool_name": "clickhouse_list_databases",  // Server-prefixed name
+  "tool_name": "incident-analysis__clickhouse_list_databases",  // Toolbox and server prefixed
   "arguments": {
     // tool-specific arguments
   }
@@ -325,7 +336,7 @@ workbench_open_toolbox({ toolbox_name: "data-analysis" })
 // 3. Use tools from the toolbox via workbench_use_tool
 workbench_use_tool({
   toolbox_name: "data-analysis",
-  tool_name: "postgres_query_database",  // Server-prefixed name
+  tool_name: "data-analysis__postgres_query_database",  // Toolbox and server prefixed
   arguments: { query: "SELECT * FROM users LIMIT 10" }
 })
 
@@ -457,6 +468,88 @@ npm run build
 # Clean build artifacts
 npm run clean
 ```
+
+## Migration Guide
+
+### Upgrading from v0.3.x to v0.4.0+
+
+**Breaking Change**: Tool naming convention has changed to support multiple toolboxes with duplicate servers.
+
+**Before (v0.3.x):**
+```
+{server}_{tool}
+Example: filesystem_read_file
+```
+
+**After (v0.4.0+):**
+```
+{toolbox}__{server}_{tool}
+Example: main__filesystem_read_file
+```
+
+**What You Need to Update:**
+
+1. **MCP Client Tool Invocations**: Update all tool calls to include the toolbox prefix
+   ```typescript
+   // Old (v0.3.x)
+   workbench_use_tool({
+     toolbox_name: "mytools",
+     tool_name: "filesystem_read_file",  // ❌ Old format
+     arguments: { path: "test.txt" }
+   })
+
+   // New (v0.4.0+)
+   workbench_use_tool({
+     toolbox_name: "mytools",
+     tool_name: "mytools__filesystem_read_file",  // ✅ New format
+     arguments: { path: "test.txt" }
+   })
+   ```
+
+2. **Configuration Files**: No changes required! Your `workbench-config.json` format remains the same.
+
+3. **Dynamic Mode**: Tools in your MCP client's tool list will now show with toolbox prefix
+   ```
+   Before: filesystem_read_file, memory_store
+   After:  main__filesystem_read_file, main__memory_store
+   ```
+
+**Benefits of the Change:**
+- ✅ Multiple toolboxes can now use the same MCP server without conflicts
+- ✅ Clear indication of which toolbox a tool belongs to
+- ✅ Support for environment-specific toolboxes (dev, staging, prod)
+
+**Example: Duplicate Toolboxes**
+```json
+{
+  "toolboxes": {
+    "dev": {
+      "description": "Development environment",
+      "mcpServers": {
+        "filesystem": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp/dev"]
+        }
+      }
+    },
+    "prod": {
+      "description": "Production environment",
+      "mcpServers": {
+        "filesystem": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-filesystem", "/var/prod"]
+        }
+      }
+    }
+  }
+}
+```
+
+Tools available:
+- `dev__filesystem_read_file` → reads from `/tmp/dev`
+- `prod__filesystem_read_file` → reads from `/var/prod`
+
+Both can be used simultaneously without conflicts!
 
 ## Troubleshooting
 
