@@ -129,16 +129,16 @@ This is a single project structure:
 
 ### Test Configuration for User Story 4
 
-- [ ] T030 [US4] Create tests/config-expansion/test-us4-defaults.json with `${LOG_LEVEL:-info}` and `${PORT:-3000}` using default syntax
-- [ ] T031 [US4] Document default values test procedure in tests/config-expansion/test-us4-defaults.md (test with/without variables set)
+- [X] T030 [US4] Create tests/config-expansion/test-us4-defaults.json with `${LOG_LEVEL:-info}` and `${PORT:-3000}` using default syntax
+- [X] T031 [US4] Document default values test procedure in tests/config-expansion/test-us4-defaults.md (test with/without variables set)
 
 ### Implementation for User Story 4
 
-- [ ] T032 [US4] Test default value syntax (FR-002) - verify `${LOG_LEVEL:-info}` uses "info" when LOG_LEVEL unset
-- [ ] T033 [US4] Test environment variable override (acceptance scenario 2) - verify variable value takes precedence over default
-- [ ] T034 [US4] Test multiple variables with mixed defaults (acceptance scenario 3) - verify some with defaults, some without
-- [ ] T035 [US4] Test default value validation (FR-011) - verify defaults with unmatched braces fail gracefully
-- [ ] T036 [US4] Verify empty string vs default behavior - ensure `export VAR=""` doesn't use default (empty is valid value)
+- [X] T032 [US4] Test default value syntax (FR-002) - verify `${LOG_LEVEL:-info}` uses "info" when LOG_LEVEL unset
+- [X] T033 [US4] Test environment variable override (acceptance scenario 2) - verify variable value takes precedence over default
+- [X] T034 [US4] Test multiple variables with mixed defaults (acceptance scenario 3) - verify some with defaults, some without
+- [X] T035 [US4] Test default value validation (FR-011) - verify defaults with unmatched braces fail gracefully
+- [X] T036 [US4] Verify empty string vs default behavior - ensure `export VAR=""` doesn't use default (empty is valid value)
 
 **Checkpoint**: User Story 4 complete - Default value syntax works for optional settings
 
