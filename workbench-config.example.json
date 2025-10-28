@@ -1,7 +1,6 @@
 {
   "_comment": "Example workbench configuration showing environment variable expansion",
-  "_documentation": "See README.md for full documentation on toolMode and environment variable syntax",
-  "toolMode": "dynamic",
+  "_documentation": "See README.md for full documentation on environment variable syntax",
   "toolboxes": {
     "development": {
       "description": "Development environment with local paths and debug settings",

@@ -1,0 +1,52 @@
+{
+  "name": "open_toolbox",
+  "description": "Connect to a toolbox and discover available tools. Returns full tool list with schemas for invocation via use_tool. Idempotent operation - calling on an already-open toolbox returns cached tool list.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "toolbox_name": {
+        "type": "string",
+        "description": "Name of the toolbox to open (must match a configured toolbox name)"
+      }
+    },
+    "required": ["toolbox_name"]
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "toolbox": {
+        "type": "string",
+        "description": "Name of the opened toolbox"
+      },
+      "description": {
+        "type": "string",
+        "description": "Purpose/description of the toolbox"
+      },
+      "servers_connected": {
+        "type": "number",
+        "description": "Number of MCP servers successfully connected"
+      },
+      "tools": {
+        "type": "array",
+        "description": "Complete list of available tools with their schemas",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Server-prefixed tool name (format: {server}__{tool})"
+            },
+            "description": {
+              "type": "string",
+              "description": "Tool description prefixed with [server] origin"
+            },
+            "inputSchema": {
+              "type": "object",
+              "description": "JSON schema defining tool parameters"
+            }
+          }
+        }
+      }
+    }
+  }
+}

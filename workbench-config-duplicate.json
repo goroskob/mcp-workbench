@@ -1,5 +1,4 @@
 {
-  "toolMode": "dynamic",
   "toolboxes": {
     "dev": {
       "description": "Development environment toolbox",

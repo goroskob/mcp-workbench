@@ -5,8 +5,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { WorkbenchServerConfig, ServerConnection, OpenedToolbox, ToolboxConfig, ToolInfo, RegisteredToolInfo } from "./types.js";
+import { WorkbenchServerConfig, ServerConnection, OpenedToolbox, ToolboxConfig, ToolInfo } from "./types.js";
 
 /**
  * Manages connections to MCP servers and toolbox lifecycle
@@ -148,8 +147,7 @@ export class ClientManager {
    */
   async openToolbox(
     toolboxName: string,
-    toolboxConfig: ToolboxConfig,
-    mcpServer: McpServer
+    toolboxConfig: ToolboxConfig
   ): Promise<{ connections: Map<string, ServerConnection>; tools: ToolInfo[] }> {
     // Check if already open
     if (this.openedToolboxes.has(toolboxName)) {
@@ -186,19 +184,11 @@ export class ClientManager {
       throw error;
     }
 
-    // Register tools on the workbench server
-    const registeredTools = await this.registerToolsOnServer(
-      mcpServer,
-      toolboxName,
-      connections
-    );
-
     // Store opened toolbox
     const openedToolbox: OpenedToolbox = {
       name: toolboxName,
       config: toolboxConfig,
       connections,
-      registeredTools,
       opened_at: new Date(),
     };
     this.openedToolboxes.set(toolboxName, openedToolbox);
@@ -207,29 +197,6 @@ export class ClientManager {
     const tools = this.getToolsFromConnections(toolboxName, connections);
 
     return { connections, tools };
-  }
-
-  /**
-   * Extract tool information list from an opened toolbox
-   */
-  private getToolInfoList(toolbox: OpenedToolbox): RegisteredToolInfo[] {
-    const tools: RegisteredToolInfo[] = [];
-
-    for (const [serverName, connection] of toolbox.connections) {
-      for (const tool of connection.tools) {
-        const prefixedName = this.generateToolName(toolbox.name, serverName, tool.name);
-        tools.push({
-          name: prefixedName,
-          original_name: tool.name,
-          server: serverName,
-          toolbox_name: toolbox.name,
-          description: tool.description,
-          title: tool.title,
-        });
-      }
-    }
-
-    return tools;
   }
 
   /**
@@ -270,131 +237,6 @@ export class ClientManager {
   }
 
   /**
-   * Register all downstream tools on the workbench server
-   * Tools are prefixed with server name to avoid conflicts
-   */
-  private async registerToolsOnServer(
-    mcpServer: McpServer,
-    toolboxName: string,
-    connections: Map<string, ServerConnection>
-  ): Promise<Map<string, any>> {
-    const registeredTools = new Map<string, any>();
-
-    for (const [serverName, connection] of connections) {
-      for (const tool of connection.tools) {
-        // Prefix tool name with toolbox and server name to support duplicate servers across toolboxes
-        const prefixedName = this.generateToolName(toolboxName, serverName, tool.name);
-
-        // Register tool on workbench server with a handler that delegates to downstream
-        const registeredTool = mcpServer.registerTool(
-          prefixedName,
-          {
-            title: tool.title,
-            description: tool.description
-              ? `[${toolboxName}/${serverName}] ${tool.description}`
-              : `Tool from ${toolboxName}/${serverName}`,
-            inputSchema: tool.inputSchema as any,
-            annotations: tool.annotations,
-            _meta: {
-              ...tool._meta,
-              source_server: serverName,
-              toolbox_name: toolboxName,
-              original_name: tool.name,
-            },
-          },
-          async (args: any) => {
-            // Parse the registered tool name to extract components
-            const parsed = this.parseToolName(prefixedName);
-            if (!parsed) {
-              return {
-                content: [
-                  {
-                    type: "text" as const,
-                    text: `Error: Invalid tool name format '${prefixedName}'. Expected format: {toolbox}__{server}__{tool} (note: double underscores between all components)`,
-                  },
-                ],
-                isError: true,
-              };
-            }
-
-            // Look up the toolbox
-            const targetToolbox = this.openedToolboxes.get(parsed.toolbox);
-            if (!targetToolbox) {
-              return {
-                content: [
-                  {
-                    type: "text" as const,
-                    text: `Error: Toolbox '${parsed.toolbox}' not found`,
-                  },
-                ],
-                isError: true,
-              };
-            }
-
-            // Look up the server connection
-            const targetConnection = targetToolbox.connections.get(parsed.server);
-            if (!targetConnection) {
-              return {
-                content: [
-                  {
-                    type: "text" as const,
-                    text: `Error: Server '${parsed.server}' not found in toolbox '${parsed.toolbox}'`,
-                  },
-                ],
-                isError: true,
-              };
-            }
-
-            // Delegate to the downstream server using original tool name
-            try {
-              const result = await targetConnection.client.callTool({
-                name: parsed.originalTool,
-                arguments: args,
-              });
-              return result;
-            } catch (error) {
-              return {
-                content: [
-                  {
-                    type: "text" as const,
-                    text: `[${parsed.toolbox}/${parsed.server}/${parsed.originalTool}] Error: ${
-                      error instanceof Error ? error.message : String(error)
-                    }`,
-                  },
-                ],
-                isError: true,
-              };
-            }
-          }
-        );
-
-        registeredTools.set(prefixedName, registeredTool);
-      }
-    }
-
-    return registeredTools;
-  }
-
-  /**
-   * Unregister all tools for a toolbox from the workbench server
-   */
-  private unregisterToolsFromServer(toolboxName: string): void {
-    const toolbox = this.openedToolboxes.get(toolboxName);
-    if (!toolbox) {
-      return;
-    }
-
-    // Remove all registered tools
-    for (const registeredTool of toolbox.registeredTools.values()) {
-      try {
-        registeredTool.remove();
-      } catch (error) {
-        console.error(`Error removing tool:`, error);
-      }
-    }
-  }
-
-  /**
    * Close a toolbox and disconnect from its servers
    */
   async closeToolbox(toolboxName: string): Promise<void> {
@@ -402,9 +244,6 @@ export class ClientManager {
     if (!toolbox) {
       throw new Error(`Toolbox '${toolboxName}' is not currently open`);
     }
-
-    // Unregister all tools first
-    this.unregisterToolsFromServer(toolboxName);
 
     // Disconnect from all servers
     const errors: Error[] = [];

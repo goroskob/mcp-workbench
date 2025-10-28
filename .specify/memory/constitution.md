@@ -1,21 +1,26 @@
 <!--
 Sync Impact Report:
-Version: 1.5.0 (Initialization instructions for toolbox discovery)
+Version: 1.6.0 (Remove dynamic mode, rename meta-tools)
 Modified Principles:
-  - I. Meta-Server Orchestration Pattern - Added initialization instructions requirement, updated meta-tool counts (2→1 dynamic, 3→2 proxy), removed workbench_list_toolboxes from meta-tool list
+  - I. Meta-Server Orchestration Pattern - Removed dynamic mode, updated meta-tools to `open_toolbox` and `use_tool` (dropped `workbench_` prefix), simplified to proxy-only operation
+  - II. Tool Naming and Conflict Resolution - Removed mode-specific language
+  - III. Proxy-Based Tool Invocation - Renamed from "Mode-Agnostic Tool Invocation", removed dynamic mode entirely, simplified to proxy-only description
 Added Sections: N/A
 Removed Sections: N/A
 Templates Requiring Updates:
-  ✅ plan-template.md - No changes needed (toolbox discovery pattern change reflected in implementations)
+  ✅ plan-template.md - No changes needed (mode removal is implementation-specific)
   ✅ spec-template.md - No changes needed (feature-specific changes)
   ✅ tasks-template.md - No changes needed (task structure unchanged)
-  ✅ README.md - Updated (removed workbench_list_toolboxes, added initialization instructions section, updated workflow examples)
-  ✅ CLAUDE.md - Updated (removed workbench_list_toolboxes from meta-tools, added initialization instructions pattern)
-  ⏳ CHANGELOG.md - Needs update for v0.9.0 release
+  ⏳ README.md - Needs update (remove dynamic mode references, update tool names)
+  ⏳ CLAUDE.md - Needs update (remove dynamic mode architecture, update tool names)
+  ⏳ CHANGELOG.md - Needs update for v0.10.0 release with breaking changes
 Follow-up TODOs:
-  - Update CHANGELOG.md with breaking change notice for v0.9.0
-  - Verify initialization instructions appear correctly in MCP clients
+  - Update README.md to remove all dynamic mode references and rename tools
+  - Update CLAUDE.md architecture documentation for proxy-only mode
+  - Update CHANGELOG.md with breaking change notice for v0.10.0
+  - Verify tool renaming works correctly with MCP clients
 Previous Versions:
+  - 1.5.0 (2025-10-27): Initialization instructions for toolbox discovery
   - 1.4.0 (2025-10-27): Simplified toolbox lifecycle - removed manual close operations
   - 1.3.0 (2025-10-27): Added release policy principle and enhanced development workflow
   - 1.2.0 (2025-10-27): Updated tool naming convention to use consistent double underscores
@@ -32,20 +37,19 @@ Previous Versions:
 The MCP Workbench is a meta-MCP server that MUST act as both an MCP server (exposing meta-tools) and an MCP client (connecting to downstream servers). This dual nature is non-negotiable:
 
 - MUST provide toolbox discovery via initialization `instructions` field (MCP standard pattern)
-- MUST expose exactly 1 meta-tool in dynamic mode: `workbench_open_toolbox`
-- MUST expose exactly 2 meta-tools in proxy mode: `workbench_open_toolbox` and `workbench_use_tool`
+- MUST expose exactly 2 meta-tools: `open_toolbox` and `use_tool`
 - MUST NOT create downstream connections at startup (lazy connection management)
 - MUST support multiple simultaneously open toolboxes
 - MUST support idempotent open operations (calling open on already-open toolbox returns immediately)
 - MUST properly clean up all connections when server shuts down (SIGINT/SIGTERM)
 
-**Rationale**: The meta-server pattern enables efficient resource management and domain-organized tool discovery without coupling the workbench to specific downstream implementations. Toolbox discovery via initialization instructions follows standard MCP patterns and eliminates extra round-trips. Automatic cleanup on shutdown simplifies the API and prevents resource leaks while reducing cognitive burden on users.
+**Rationale**: The meta-server pattern enables efficient resource management and domain-organized tool discovery without coupling the workbench to specific downstream implementations. Toolbox discovery via initialization instructions follows standard MCP patterns and eliminates extra round-trips. Automatic cleanup on shutdown simplifies the API and prevents resource leaks while reducing cognitive burden on users. Proxy-only operation simplifies the architecture and eliminates mode-specific code paths.
 
 ### II. Tool Naming and Conflict Resolution
 
 All downstream tools MUST be prefixed with both their toolbox and source server name using the pattern `{toolbox}__{server}__{tool}` (consistent double underscores) to prevent naming conflicts:
 
-- Toolbox and server-prefixed naming is MANDATORY in both dynamic and proxy modes
+- Toolbox and server-prefixed naming is MANDATORY
 - Double underscore `__` MUST separate all components (toolbox, server, tool)
 - Tool names MUST be deterministic and predictable
 - Original tool names MUST be preserved in metadata for delegation
@@ -57,20 +61,17 @@ All downstream tools MUST be prefixed with both their toolbox and source server 
 
 **Rationale**: Three-level naming (toolbox + server + tool) with consistent double-underscore separators prevents conflicts between duplicate MCP server instances across multiple toolboxes while maintaining clarity about tool provenance and simplifying parsing logic. This enables multiple toolboxes to use the same MCP server without naming collisions, supporting development/production isolation and multi-environment workflows.
 
-### III. Mode-Agnostic Tool Invocation
+### III. Proxy-Based Tool Invocation
 
-The workbench MUST support two invocation modes with identical tool naming but different registration strategies:
+The workbench operates exclusively in proxy mode, where all tool invocation flows through the `use_tool` meta-tool:
 
-- **Dynamic Mode (default)**: Tools dynamically registered on the workbench server with prefixed names; MCP clients call tools directly; `tool list changed` notifications sent on toolbox open/close
-- **Proxy Mode**: Tools returned with full schemas but not registered; MCP clients invoke via `workbench_use_tool` meta-tool; designed for clients without dynamic registration support
+- Tools MUST be returned with full schemas via `open_toolbox` but NOT dynamically registered
+- Tool invocation MUST occur via the `use_tool` meta-tool with explicit toolbox and tool names
+- Tool names MUST follow the `{toolbox}__{server}__{tool}` naming convention
+- All tool calls MUST delegate to downstream servers using original tool names
+- Tool filters from configuration MUST be applied during toolbox opening
 
-Both modes MUST:
-- Use identical `{toolbox}__{server}__{tool}` naming convention
-- Delegate to downstream servers using original tool names
-- Return identical results for equivalent operations
-- Apply identical tool filters from configuration
-
-**Rationale**: Supporting both modes maximizes compatibility across MCP client implementations while maintaining consistent behavior and naming.
+**Rationale**: Proxy-only operation simplifies the architecture, eliminates mode-specific code paths, and provides a consistent invocation pattern across all MCP clients. This design trades dynamic tool registration convenience for reduced complexity and clearer separation between meta-tools and downstream tools.
 
 ### IV. Configuration as Contract
 

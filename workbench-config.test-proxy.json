@@ -1,4 +1,5 @@
 {
+  "_comment": "toolMode field is deprecated - proxy mode is now the default and only mode",
   "toolMode": "proxy",
   "toolboxes": {
     "test-memory": {

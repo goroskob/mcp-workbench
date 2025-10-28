@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 MCP Workbench is a **meta-MCP server** that aggregates tools from other MCP servers and organizes them into "toolboxes" for discovery and invocation. It acts as an orchestrator that connects to downstream MCP servers and provides two modes of operation:
 
 - **Dynamic mode** (default): Tools are dynamically registered on the workbench server with prefixed names, appearing natively in the MCP client's tool list
-- **Proxy mode**: Tools are accessed via a `workbench_use_tool` meta-tool, designed for MCP clients that don't support dynamic tool registration
+- **Proxy mode**: Tools are accessed via a `use_tool` meta-tool, designed for MCP clients that don't support dynamic tool registration
 
 ## Build and Development Commands
 
@@ -94,30 +94,30 @@ The workbench acts as both an **MCP server** (exposes 2-3 meta-tools depending o
 
 The workbench supports two modes for invoking downstream tools, controlled by the `toolMode` configuration field:
 
-#### Dynamic Mode (default, `toolMode: "dynamic"`)
+#### Proxy-Only Mode (default, `toolMode: "dynamic"`)
 When a toolbox is opened, downstream tools are **dynamically registered** on the workbench server with prefixed names (`{toolbox}__{server}__{tool}`). This means:
 - Tools appear natively in the MCP client's tool list
 - No proxy layer needed - tools are called directly by name
 - Better IDE integration and discoverability
-- `workbench_open_toolbox` returns a count of registered tools
+- `open_toolbox` returns a count of registered tools
 - Toolboxes remain open until server shutdown (automatic cleanup)
-- **Workbench exposes 2 meta-tools**: `workbench_list_toolboxes`, `workbench_open_toolbox`
+- **Workbench exposes 2 meta-tools**: `workbench_list_toolboxes`, `open_toolbox`
 
-#### Proxy Mode (`toolMode: "proxy"`)
+#### Proxy-Only Mode (`toolMode: "proxy"`)
 When a toolbox is opened, tool information is returned but tools are **not dynamically registered**. Instead:
-- Tools are invoked via the `workbench_use_tool` meta-tool
+- Tools are invoked via the `use_tool` meta-tool
 - MCP client explicitly specifies toolbox name, tool name, and arguments
 - Designed for MCP clients that don't support dynamic tool registration
-- `workbench_open_toolbox` returns full tool list with schemas
+- `open_toolbox` returns full tool list with schemas
 - Toolboxes remain open until server shutdown (automatic cleanup)
-- **Workbench exposes 3 meta-tools**: `workbench_list_toolboxes`, `workbench_open_toolbox`, `workbench_use_tool`
+- **Workbench exposes 3 meta-tools**: `workbench_list_toolboxes`, `open_toolbox`, `use_tool`
 
 **Tool naming is consistent in both modes**: Tools are always identified with the `{toolbox}__{server}__{tool}` prefix to avoid conflicts.
 
 ### Core Components
 
 **src/index.ts** - Main MCP server
-- Implements 2-3 workbench meta-tools (2 in dynamic mode, 3 in proxy mode): `list_toolboxes`, `open_toolbox`, and `use_tool` (proxy mode only)
+- Implements 2-3 workbench meta-tools (2 in proxy-only mode, 3 in proxy-only mode): `list_toolboxes`, `open_toolbox`, and `use_tool` (proxy-only mode only)
 - Manages server lifecycle (initialization, automatic cleanup on SIGINT/SIGTERM)
 - Loads configuration via `config-loader.ts`
 - Sends `tool list changed` notifications when toolboxes open
@@ -157,7 +157,7 @@ When a toolbox is opened, tool information is returned but tools are **not dynam
 - `WorkbenchConfig` - Configuration schema with optional `toolMode` field and `toolboxes` map
 - `ToolboxConfig`, `McpServerConfig`, `WorkbenchServerConfig` - Define toolbox and server configurations
 - `ServerConnection` - Tracks MCP client instances, transports, and cached tools
-- `OpenedToolbox` - Represents runtime state with connections and `registeredTools` map (dynamic mode only)
+- `OpenedToolbox` - Represents runtime state with connections and `registeredTools` map (proxy-only mode only)
 - `ToolInfo` - Extends MCP SDK's `Tool` type with `source_server`, `toolbox_name`, and `original_name` metadata
 - `OpenToolboxResult` - Return type varies by mode:
   - **Proxy mode**: Contains full `tools: ToolInfo[]` array with schemas
@@ -173,13 +173,13 @@ The workbench exposes 1-2 meta-tools depending on the configured `toolMode`:
 - Available immediately on connection without additional tool calls
 
 **Always Available (Both Modes):**
-1. **workbench_open_toolbox** - Connects to all MCP servers in a toolbox (idempotent - safe to call multiple times)
+1. **open_toolbox** - Connects to all MCP servers in a toolbox (idempotent - safe to call multiple times)
    - **Dynamic mode**: Registers tools with prefixed names, sends tool list changed notification, returns tools_registered count
-   - **Proxy mode**: Returns full tool list with schemas for use with `workbench_use_tool`
+   - **Proxy mode**: Returns full tool list with schemas for use with `use_tool`
    - Toolboxes remain open until server shutdown with automatic cleanup
 
-**Proxy Mode Only:**
-2. **workbench_use_tool** - Executes a tool from an opened toolbox by delegating to the downstream server (only registered when `toolMode: "proxy"`)
+**Proxy-Only Mode Only:**
+2. **use_tool** - Executes a tool from an opened toolbox by delegating to the downstream server (only registered when `toolMode: "proxy"`)
 
 ### Tool Naming Convention
 
@@ -230,7 +230,7 @@ The server requires a `workbench-config.json` file with this structure:
 **Configuration Schema Notes:**
 - **toolMode** (optional, top-level): Tool invocation mode - `"dynamic"` (default) or `"proxy"`
   - **dynamic**: Tools are dynamically registered on the workbench server and appear in MCP client's tool list
-  - **proxy**: Tools are accessed via `workbench_use_tool` meta-tool (for clients without dynamic registration support)
+  - **proxy**: Tools are accessed via `use_tool` meta-tool (for clients without dynamic registration support)
 - **toolbox_name**: Used as identifier in tool calls
 - **mcpServers**: Uses the **standard MCP configuration schema** (compatible with Claude Desktop/.claude.json)
   - Keys are server names (unique identifiers, used as tool name prefix)
@@ -315,7 +315,7 @@ Toolbox discovery is integrated into the MCP initialization handshake via the `i
 **Format**:
 - Plain text with structured sections
 - Lists toolbox name, server count, description
-- Includes usage guidance for `workbench_open_toolbox`
+- Includes usage guidance for `open_toolbox`
 - No dynamic updates (clients must reconnect to see config changes)
 
 **Benefits**:
@@ -325,15 +325,15 @@ Toolbox discovery is integrated into the MCP initialization handshake via the `i
 - No additional tool calls needed
 
 ### Lazy Connection Management
-Connections are **not** created at server startup. They're created when `workbench_open_toolbox` is called, allowing:
+Connections are **not** created at server startup. They're created when `open_toolbox` is called, allowing:
 - Multiple toolboxes can be open simultaneously
 - Idempotent opens (safe to call multiple times on same toolbox)
 - Toolboxes remain open until server shutdown with automatic cleanup
 
 ### Tool Registration and Invocation Patterns
 
-#### Dynamic Mode (Default)
-When `workbench_open_toolbox` is called:
+#### Proxy-Only Mode (Default)
+When `open_toolbox` is called:
 1. Checks if toolbox already open (idempotent - returns immediately if yes)
 2. Connects to all downstream MCP servers
 3. Queries `tools/list` from each server
@@ -356,8 +356,8 @@ When server shuts down (SIGINT/SIGTERM):
 3. Disconnects from all downstream servers
 4. Process exits cleanly within 5 seconds
 
-#### Proxy Mode
-When `workbench_open_toolbox` is called:
+#### Proxy-Only Mode
+When `open_toolbox` is called:
 1. Checks if toolbox already open (idempotent - returns immediately if yes)
 2. Connects to all downstream MCP servers
 3. Queries `tools/list` from each server
@@ -365,7 +365,7 @@ When `workbench_open_toolbox` is called:
 5. Tools are prefixed with server name in the returned list
 6. Toolbox remains open until server shutdown
 
-When `workbench_use_tool` is called:
+When `use_tool` is called:
 1. MCP client specifies `toolbox_name`, `tool_name` (prefixed), and `arguments`
 2. Workbench finds the appropriate server connection and original tool name
 3. Delegates to downstream server: `client.callTool({ name: original_name, arguments })`
@@ -423,12 +423,12 @@ Tool names are **always prefixed** with toolbox and server name (`{toolbox}__{se
 - Tool name parsing uses `ClientManager.parseToolName(registeredName)` to extract components
 - Format uses double underscore `__` consistently between all components (toolbox, server, and tool)
 
-**In dynamic mode**, prefixing happens during registration via `ClientManager.registerToolsOnServer()`. Each tool is registered with a handler that:
+**In proxy-only mode**, prefixing happens during registration via `ClientManager.registerToolsOnServer()`. Each tool is registered with a handler that:
 1. Parses the registered tool name to extract toolbox, server, and original tool name
 2. Dynamically looks up the toolbox and server connection at invocation time
 3. Delegates to the downstream server using the original tool name
 
-**In proxy mode**, prefixing happens when building the tool list via `ClientManager.getToolsFromConnections()`.
+**In proxy-only mode**, prefixing happens when building the tool list via `ClientManager.getToolsFromConnections()`.
 
 If you need different behavior, modify the `generateToolName()` and `parseToolName()` methods in [src/client-manager.ts](src/client-manager.ts).
 
@@ -446,6 +446,7 @@ If you need different behavior, modify the `generateToolName()` and `parseToolNa
 - N/A (configuration is file-based JSON, no persistent storage) (003-env-var-expansion)
 - TypeScript 5.7.2, Node.js 18+ + @modelcontextprotocol/sdk ^1.6.1, zod ^3.23.8 (004-remove-manual-close)
 - N/A (in-memory state management only) (004-remove-manual-close)
+- TypeScript 5.7.2 with ES2022 target, Node.js 18+ + @modelcontextprotocol/sdk ^1.6.1, zod ^3.23.8 (006-remove-dynamic-mode)
 
 ## Recent Changes
 - 001-duplicate-tools-support: Added TypeScript 5.7.2 with ES2022 target, Node.js 18+ runtime + @modelcontextprotocol/sdk ^1.6.1, zod ^3.23.8 for validation
