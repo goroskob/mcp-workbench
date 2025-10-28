@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2025-10-28
+
+### Removed
+- **BREAKING**: Removed `workbench_list_toolboxes` meta-tool from the API
+  - Toolbox discovery now provided via `instructions` field in MCP initialization response
+  - Follows standard MCP initialization pattern
+  - Eliminates extra round-trip for toolbox discovery
+
+### Added
+- Initialization `instructions` field containing toolbox listings with names, server counts, and descriptions
+- Plain text formatted toolbox discovery available immediately on connection
+- Toolbox metadata displayed during MCP handshake without additional tool calls
+
+### Changed
+- Meta-tool count reduced: 1 meta-tool in dynamic mode (was 2), 2 in proxy mode (was 3)
+- Tool references in descriptions updated to use "initialization instructions" instead of `workbench_list_toolboxes`
+
+### Benefits
+- Faster client onboarding (one less round-trip)
+- Standard MCP initialization pattern
+- Simpler client implementation
+- Toolbox discovery integrated into connection handshake
+
 ## [0.8.0] - 2025-10-28
 
 ### Removed

@@ -1,21 +1,22 @@
 <!--
 Sync Impact Report:
-Version: 1.4.0 (Simplified toolbox lifecycle - removed manual close operations)
+Version: 1.5.0 (Initialization instructions for toolbox discovery)
 Modified Principles:
-  - I. Meta-Server Orchestration Pattern - Updated meta-tool counts (3→2 dynamic, 4→3 proxy), removed close_toolbox, added idempotent open requirement, changed cleanup from "when toolboxes close" to "when server shuts down"
+  - I. Meta-Server Orchestration Pattern - Added initialization instructions requirement, updated meta-tool counts (2→1 dynamic, 3→2 proxy), removed workbench_list_toolboxes from meta-tool list
 Added Sections: N/A
 Removed Sections: N/A
 Templates Requiring Updates:
-  ✅ plan-template.md - No changes needed (meta-tool changes reflected in implementations)
+  ✅ plan-template.md - No changes needed (toolbox discovery pattern change reflected in implementations)
   ✅ spec-template.md - No changes needed (feature-specific changes)
   ✅ tasks-template.md - No changes needed (task structure unchanged)
-  ✅ README.md - Updated (removed close_toolbox documentation, updated workflow examples)
-  ✅ CLAUDE.md - Updated (removed close_toolbox from meta-tools, updated lifecycle patterns)
-  ⏳ CHANGELOG.md - Needs update for v0.8.0 release
+  ✅ README.md - Updated (removed workbench_list_toolboxes, added initialization instructions section, updated workflow examples)
+  ✅ CLAUDE.md - Updated (removed workbench_list_toolboxes from meta-tools, added initialization instructions pattern)
+  ⏳ CHANGELOG.md - Needs update for v0.9.0 release
 Follow-up TODOs:
-  - Update CHANGELOG.md with breaking change notice for v0.8.0
-  - Verify all downstream MCP servers work with automatic cleanup
+  - Update CHANGELOG.md with breaking change notice for v0.9.0
+  - Verify initialization instructions appear correctly in MCP clients
 Previous Versions:
+  - 1.4.0 (2025-10-27): Simplified toolbox lifecycle - removed manual close operations
   - 1.3.0 (2025-10-27): Added release policy principle and enhanced development workflow
   - 1.2.0 (2025-10-27): Updated tool naming convention to use consistent double underscores
   - 1.1.0 (2025-10-27): Updated tool naming to support duplicate servers across toolboxes
@@ -30,14 +31,15 @@ Previous Versions:
 
 The MCP Workbench is a meta-MCP server that MUST act as both an MCP server (exposing meta-tools) and an MCP client (connecting to downstream servers). This dual nature is non-negotiable:
 
-- MUST expose exactly 2 meta-tools in dynamic mode: `workbench_list_toolboxes`, `workbench_open_toolbox`
-- MUST expose exactly 3 meta-tools in proxy mode: the above two plus `workbench_use_tool`
+- MUST provide toolbox discovery via initialization `instructions` field (MCP standard pattern)
+- MUST expose exactly 1 meta-tool in dynamic mode: `workbench_open_toolbox`
+- MUST expose exactly 2 meta-tools in proxy mode: `workbench_open_toolbox` and `workbench_use_tool`
 - MUST NOT create downstream connections at startup (lazy connection management)
 - MUST support multiple simultaneously open toolboxes
 - MUST support idempotent open operations (calling open on already-open toolbox returns immediately)
 - MUST properly clean up all connections when server shuts down (SIGINT/SIGTERM)
 
-**Rationale**: The meta-server pattern enables efficient resource management and domain-organized tool discovery without coupling the workbench to specific downstream implementations. Automatic cleanup on shutdown simplifies the API and prevents resource leaks while reducing cognitive burden on users.
+**Rationale**: The meta-server pattern enables efficient resource management and domain-organized tool discovery without coupling the workbench to specific downstream implementations. Toolbox discovery via initialization instructions follows standard MCP patterns and eliminates extra round-trips. Automatic cleanup on shutdown simplifies the API and prevents resource leaks while reducing cognitive burden on users.
 
 ### II. Tool Naming and Conflict Resolution
 

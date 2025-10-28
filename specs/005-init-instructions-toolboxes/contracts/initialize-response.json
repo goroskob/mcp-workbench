@@ -1,0 +1,149 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Initialize Response (Modified)",
+  "description": "Workbench initialization response with new instructions field containing toolbox listings",
+  "type": "object",
+  "required": ["jsonrpc", "id", "result"],
+  "properties": {
+    "jsonrpc": {
+      "type": "string",
+      "const": "2.0",
+      "description": "JSON-RPC version"
+    },
+    "id": {
+      "oneOf": [
+        {"type": "string"},
+        {"type": "number"}
+      ],
+      "description": "Request identifier matching the request"
+    },
+    "result": {
+      "type": "object",
+      "required": ["protocolVersion", "capabilities", "serverInfo"],
+      "properties": {
+        "protocolVersion": {
+          "type": "string",
+          "description": "MCP protocol version supported by server",
+          "example": "2024-11-05"
+        },
+        "capabilities": {
+          "type": "object",
+          "description": "Server capabilities",
+          "properties": {
+            "tools": {
+              "type": "object",
+              "description": "Tool capabilities",
+              "properties": {
+                "listChanged": {
+                  "type": "boolean",
+                  "description": "Whether server sends tool list changed notifications"
+                }
+              }
+            },
+            "logging": {
+              "type": "object",
+              "description": "Logging capabilities"
+            },
+            "prompts": {
+              "type": "object",
+              "description": "Prompt capabilities"
+            },
+            "resources": {
+              "type": "object",
+              "description": "Resource capabilities"
+            },
+            "experimental": {
+              "type": "object",
+              "description": "Experimental features"
+            }
+          }
+        },
+        "serverInfo": {
+          "type": "object",
+          "required": ["name", "version"],
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Server implementation name",
+              "const": "mcp-workbench"
+            },
+            "version": {
+              "type": "string",
+              "description": "Server version (semver)",
+              "pattern": "^\\d+\\.\\d+\\.\\d+",
+              "example": "1.0.0"
+            }
+          }
+        },
+        "instructions": {
+          "type": "string",
+          "description": "NEW: Human-readable instructions containing toolbox listings and usage guidance. Plain text format with sections, indentation, and blank lines for readability.",
+          "minLength": 1,
+          "example": "Available Toolboxes:\\n\\ndev (3 servers)\\n  Description: Development environment tools\\n\\nprod (2 servers)\\n  Description: Production monitoring tools\\n\\nTo access tools from a toolbox, use workbench_open_toolbox with the toolbox name."
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "description": "Response with multiple toolboxes",
+      "value": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": {
+          "protocolVersion": "2024-11-05",
+          "capabilities": {
+            "tools": {
+              "listChanged": true
+            }
+          },
+          "serverInfo": {
+            "name": "mcp-workbench",
+            "version": "1.0.0"
+          },
+          "instructions": "Available Toolboxes:\n\ndev (3 servers)\n  Description: Development environment tools\n\nprod (2 servers)\n  Description: Production monitoring tools\n\nTo access tools from a toolbox, use workbench_open_toolbox with the toolbox name."
+        }
+      }
+    },
+    {
+      "description": "Response with no toolboxes configured",
+      "value": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": {
+          "protocolVersion": "2024-11-05",
+          "capabilities": {
+            "tools": {
+              "listChanged": true
+            }
+          },
+          "serverInfo": {
+            "name": "mcp-workbench",
+            "version": "1.0.0"
+          },
+          "instructions": "No toolboxes configured.\n\nTo configure toolboxes, add them to your workbench-config.json file.\nSee documentation for configuration format."
+        }
+      }
+    },
+    {
+      "description": "Response with toolbox missing description",
+      "value": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": {
+          "protocolVersion": "2024-11-05",
+          "capabilities": {
+            "tools": {
+              "listChanged": true
+            }
+          },
+          "serverInfo": {
+            "name": "mcp-workbench",
+            "version": "1.0.0"
+          },
+          "instructions": "Available Toolboxes:\n\ntest (1 servers)\n  Description: No description provided\n\nTo access tools from a toolbox, use workbench_open_toolbox with the toolbox name."
+        }
+      }
+    }
+  ]
+}

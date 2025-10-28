@@ -60,16 +60,6 @@ export interface ToolInfo extends Tool {
 }
 
 /**
- * Summary information about a toolbox
- */
-export interface ToolboxSummary {
-  name: string;
-  description: string;
-  tool_count: number;
-  is_open: boolean;
-}
-
-/**
  * Information about a registered tool
  */
 export interface RegisteredToolInfo {
