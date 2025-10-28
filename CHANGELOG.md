@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1] - 2025-10-28
+
+### Fixed
+
+- Updated `use_tool` meta-tool description to accurately reflect structured identifier format
+  - Removed outdated references to string-based `toolbox_name` and `tool_name` parameters
+  - Added clear documentation of structured `{ toolbox, server, tool }` format
+  - Included concrete usage example in tool description
+  - Enhanced error handling descriptions to match current implementation
+
 ## [0.11.0] - 2025-10-28
 
 ### BREAKING CHANGES
