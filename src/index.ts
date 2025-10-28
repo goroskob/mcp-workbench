@@ -261,35 +261,44 @@ Error Handling:
       }
     );
 
-    // Tool 2: Use a tool (proxy mode)
+    // Tool 2: Use a tool
     this.server.registerTool(
       "use_tool",
       {
         title: "Use a Tool from Toolbox",
-        description: `Execute a tool from an opened toolbox by delegating to the appropriate downstream MCP server.
+        description: `Execute a tool from an opened toolbox using structured tool identifiers.
 
 How it works:
-1. Specify the toolbox name and tool name
+1. Specify the tool using a structured identifier: { toolbox, server, tool }
 2. Provide the tool arguments as an object
-3. The workbench proxies the request to the appropriate MCP server
+3. The workbench proxies the request to the appropriate downstream MCP server
 4. Returns the tool's response
 
 Args:
-  - toolbox_name: Name of an opened toolbox
-  - tool_name: Server-prefixed tool name (e.g., 'clickhouse-wsw1_run_select_query') as shown in open_toolbox response
+  - tool: Structured tool identifier (required)
+    - toolbox: Name of the opened toolbox (string, non-empty)
+    - server: Name of the MCP server providing the tool (string, non-empty)
+    - tool: Name of the tool from the downstream server (string, non-empty)
   - arguments: Tool arguments as a JSON object (optional)
 
 Returns:
   Proxied response from the underlying tool
 
-Examples:
-  - Use when: Invoking tools from an opened toolbox
-  - Use when: You prefer explicit toolbox/tool naming
-  - After: Opening a toolbox with open_toolbox
+Example:
+  {
+    "tool": {
+      "toolbox": "dev",
+      "server": "filesystem",
+      "tool": "read_file"
+    },
+    "arguments": { "path": "/etc/hosts" }
+  }
 
 Error Handling:
   - Returns error if toolbox is not open
-  - Returns error if tool is not found in the toolbox
+  - Returns error if server is not found in toolbox
+  - Returns error if tool is not found in server
+  - Returns error if any identifier field is empty
   - Propagates errors from the underlying tool`,
         inputSchema: UseToolInputSchema.shape,
         annotations: {
