@@ -409,7 +409,7 @@ Open a toolbox and discover its tools.
 ```typescript
 // Input:
 {
-  "toolbox_name": "incident-analysis"
+  "toolbox": "incident-analysis"
 }
 
 // Output: (returns full tool list with schemas)
@@ -420,8 +420,8 @@ Open a toolbox and discover its tools.
   "tools": [
     {
       "name": "list_databases",               // Original tool name
-      "source_server": "clickhouse",          // MCP server providing this tool
-      "toolbox_name": "incident-analysis",    // Toolbox containing this tool
+      "server": "clickhouse",                 // MCP server providing this tool
+      "toolbox": "incident-analysis",         // Toolbox containing this tool
       "description": "List available databases",
       "inputSchema": {...},
       "annotations": {...}
@@ -458,8 +458,8 @@ Execute a tool from an opened toolbox using structured tool identifiers.
 // (automatically provided during MCP initialization)
 
 // 2. Open the toolbox you need
-open_toolbox({ toolbox_name: "data-analysis" })
-// Returns tool list with separate toolbox_name, source_server, name fields
+open_toolbox({ toolbox: "data-analysis" })
+// Returns tool list with separate toolbox, server, name (tool) fields
 
 // 3. Use tools from the toolbox via use_tool with structured identifiers
 use_tool({
