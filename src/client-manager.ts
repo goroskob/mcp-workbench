@@ -505,7 +505,7 @@ export class ClientManager {
   /**
    * Close all toolboxes and cleanup
    */
-  async closeAll(): Promise<void> {
+  async closeAllToolboxes(): Promise<void> {
     const toolboxNames = Array.from(this.openedToolboxes.keys());
     for (const name of toolboxNames) {
       try {

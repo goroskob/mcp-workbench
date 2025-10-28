@@ -9,7 +9,7 @@ Instead of managing connections to multiple MCP servers manually, MCP Workbench 
 1. **Organize tools by domain** - Group related MCP servers into named toolboxes (e.g., "incident-analysis", "gitlab-workflow")
 2. **Dynamic discovery** - Open a toolbox to discover all available tools from its servers
 3. **Unified invocation** - Call tools through dynamic registration (default) or proxy mode
-4. **Efficient resource management** - Open/close toolboxes as needed to manage connections
+4. **Automatic resource management** - Toolboxes remain open until server shutdown, with automatic cleanup of all connections
 
 ### Two Invocation Modes
 
@@ -444,7 +444,7 @@ Add to your configuration file:
 
 ### Available Tools
 
-The workbench provides 3-4 meta-tools depending on the configured `toolMode`:
+The workbench provides 2-3 meta-tools depending on the configured `toolMode`:
 
 #### 1. `workbench_list_toolboxes`
 
@@ -534,20 +534,6 @@ Execute a tool from an opened toolbox. Only available when `toolMode: "proxy"`.
 // Output: (tool's direct response)
 ```
 
-#### 4. `workbench_close_toolbox`
-
-Close a toolbox and disconnect from its servers.
-
-```typescript
-// Input:
-{
-  "toolbox_name": "incident-analysis"
-}
-
-// Output:
-"Successfully closed toolbox 'incident-analysis', unregistered tools, and disconnected from all servers."
-```
-
 ## Workflow Examples
 
 ### Proxy Mode Workflow
@@ -566,8 +552,8 @@ workbench_use_tool({
   arguments: { query: "SELECT * FROM users LIMIT 10" }
 })
 
-// 4. Close when done
-workbench_close_toolbox({ toolbox_name: "data-analysis" })
+// Toolboxes remain open until server shutdown - no manual close needed
+// All connections are automatically cleaned up when the server terminates
 ```
 
 ### Dynamic Mode Workflow
@@ -583,8 +569,8 @@ workbench_open_toolbox({ toolbox_name: "data-analysis" })
 // 3. Call tools directly by their registered names
 data-analysis__postgres__query_database({ query: "SELECT * FROM users LIMIT 10" })
 
-// 4. Close when done (unregisters tools)
-workbench_close_toolbox({ toolbox_name: "data-analysis" })
+// Toolboxes remain open until server shutdown - no manual close needed
+// All connections are automatically cleaned up when the server terminates
 ```
 
 ## Use Cases
@@ -652,11 +638,10 @@ Organize tools by environment:
 ┌────────────▼────────────────────────┐
 │        MCP Workbench Server         │
 │  ┌──────────────────────────────┐   │
-│  │  Meta-Tools (3-4 tools):     │   │
+│  │  Meta-Tools (2-3 tools):     │   │
 │  │  - list_toolboxes            │   │
 │  │  - open_toolbox              │   │
 │  │  - use_tool (proxy mode)     │   │
-│  │  - close_toolbox             │   │
 │  │                              │   │
 │  │  Dynamic Mode:               │   │
 │  │  + Registered downstream     │   │
@@ -668,6 +653,8 @@ Organize tools by environment:
 │  │  - Tool discovery            │   │
 │  │  - Dynamic registration or   │   │
 │  │    request proxying          │   │
+│  │  - Automatic cleanup on      │   │
+│  │    server shutdown           │   │
 │  └──────────────────────────────┘   │
 └────────┬────────────┬───────────────┘
          │            │

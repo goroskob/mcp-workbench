@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MCP Workbench Meta-Tools API Contract",
+  "description": "Updated API contract for MCP Workbench meta-tools after removing manual toolbox closing",
+  "version": "0.8.0",
+  "breaking_changes": [
+    "Removed workbench_close_toolbox tool from both dynamic and proxy modes",
+    "Tool count reduced from 3→2 in dynamic mode, 4→3 in proxy mode"
+  ],
+  "modes": {
+    "dynamic": {
+      "description": "Tools are dynamically registered on the workbench server",
+      "tool_count": 2,
+      "tools": [
+        {
+          "name": "workbench_list_toolboxes",
+          "description": "Lists all configured toolboxes without making connections",
+          "status": "unchanged",
+          "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+          },
+          "returns": {
+            "type": "object",
+            "properties": {
+              "toolboxes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "tool_count": {"type": "number"},
+                    "is_open": {"type": "boolean"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "workbench_open_toolbox",
+          "description": "Opens a toolbox, connecting to its MCP servers and registering tools",
+          "status": "modified",
+          "changes": [
+            "Now idempotent - calling on already-open toolbox returns success immediately",
+            "Toolbox remains open until server shutdown (no manual close available)"
+          ],
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "toolbox_name": {
+                "type": "string",
+                "description": "Name of the toolbox to open"
+              }
+            },
+            "required": ["toolbox_name"]
+          },
+          "returns": {
+            "type": "object",
+            "properties": {
+              "toolbox": {"type": "string"},
+              "description": {"type": "string"},
+              "servers_connected": {"type": "number"},
+              "tools_registered": {
+                "type": "number",
+                "description": "Count of tools registered on workbench server"
+              }
+            }
+          }
+        }
+      ],
+      "removed_tools": [
+        {
+          "name": "workbench_close_toolbox",
+          "reason": "Manual toolbox closing no longer supported - cleanup happens automatically on server shutdown",
+          "migration": "Remove all calls to workbench_close_toolbox. Toolboxes now remain open until server terminates.",
+          "previous_behavior": "Disconnected from all MCP servers in a toolbox, unregistered tools, sent tool list changed notification"
+        }
+      ]
+    },
+    "proxy": {
+      "description": "Tools accessed via workbench_use_tool meta-tool",
+      "tool_count": 3,
+      "tools": [
+        {
+          "name": "workbench_list_toolboxes",
+          "description": "Lists all configured toolboxes without making connections",
+          "status": "unchanged",
+          "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+          },
+          "returns": {
+            "type": "object",
+            "properties": {
+              "toolboxes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "tool_count": {"type": "number"},
+                    "is_open": {"type": "boolean"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "workbench_open_toolbox",
+          "description": "Opens a toolbox, connecting to its MCP servers and returning tool list",
+          "status": "modified",
+          "changes": [
+            "Now idempotent - calling on already-open toolbox returns success immediately",
+            "Toolbox remains open until server shutdown (no manual close available)"
+          ],
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "toolbox_name": {
+                "type": "string",
+                "description": "Name of the toolbox to open"
+              }
+            },
+            "required": ["toolbox_name"]
+          },
+          "returns": {
+            "type": "object",
+            "properties": {
+              "toolbox": {"type": "string"},
+              "description": {"type": "string"},
+              "servers_connected": {"type": "number"},
+              "tools": {
+                "type": "array",
+                "description": "Full tool list with schemas for use with workbench_use_tool",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {"type": "string"},
+                    "source_server": {"type": "string"},
+                    "toolbox_name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "inputSchema": {"type": "object"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "workbench_use_tool",
+          "description": "Executes a tool from an opened toolbox by delegating to downstream server",
+          "status": "unchanged",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "toolbox_name": {
+                "type": "string",
+                "description": "Name of an opened toolbox"
+              },
+              "tool_name": {
+                "type": "string",
+                "description": "Server-prefixed tool name (e.g., 'clickhouse-wsw1_run_select_query')"
+              },
+              "arguments": {
+                "type": "object",
+                "description": "Tool arguments as JSON object",
+                "default": {}
+              }
+            },
+            "required": ["toolbox_name", "tool_name"]
+          },
+          "returns": {
+            "type": "object",
+            "description": "Proxied response from the underlying tool"
+          }
+        }
+      ],
+      "removed_tools": [
+        {
+          "name": "workbench_close_toolbox",
+          "reason": "Manual toolbox closing no longer supported - cleanup happens automatically on server shutdown",
+          "migration": "Remove all calls to workbench_close_toolbox. Toolboxes now remain open until server terminates.",
+          "previous_behavior": "Disconnected from all MCP servers in a toolbox"
+        }
+      ]
+    }
+  },
+  "lifecycle": {
+    "previous_workflow": [
+      "1. workbench_list_toolboxes → Query available toolboxes",
+      "2. workbench_open_toolbox → Open specific toolbox",
+      "3. Use downstream tools (direct calls in dynamic mode, via workbench_use_tool in proxy mode)",
+      "4. workbench_close_toolbox → Explicitly close toolbox when done",
+      "5. Server shutdown → Cleanup any remaining open toolboxes"
+    ],
+    "new_workflow": [
+      "1. workbench_list_toolboxes → Query available toolboxes",
+      "2. workbench_open_toolbox → Open specific toolbox (idempotent)",
+      "3. Use downstream tools (direct calls in dynamic mode, via workbench_use_tool in proxy mode)",
+      "4. Server shutdown → Automatic cleanup of all open toolboxes"
+    ],
+    "cleanup_strategy": "All toolbox connections are automatically cleaned up when the workbench server terminates (SIGINT/SIGTERM signals). Cleanup completes within 5 seconds."
+  },
+  "error_handling": {
+    "calling_removed_tool": {
+      "error": "Tool not found: workbench_close_toolbox",
+      "mitigation": "Update client code to remove close_toolbox calls",
+      "backward_compatibility": "None - breaking change in incubating phase (version < 1.0.0)"
+    },
+    "idempotent_open": {
+      "scenario": "Calling workbench_open_toolbox on already-open toolbox",
+      "behavior": "Returns success immediately with existing toolbox data",
+      "no_error": true
+    }
+  }
+}

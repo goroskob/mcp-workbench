@@ -25,15 +25,6 @@ const OpenToolboxInputSchema = z
   })
   .strict();
 
-const CloseToolboxInputSchema = z
-  .object({
-    toolbox_name: z
-      .string()
-      .min(1)
-      .describe("Name of the toolbox to close"),
-  })
-  .strict();
-
 const UseToolInputSchema = z
   .object({
     toolbox_name: z
@@ -55,7 +46,6 @@ const UseToolInputSchema = z
 // Type inference
 type ListToolboxesInput = z.infer<typeof ListToolboxesInputSchema>;
 type OpenToolboxInput = z.infer<typeof OpenToolboxInputSchema>;
-type CloseToolboxInput = z.infer<typeof CloseToolboxInputSchema>;
 type UseToolInput = z.infer<typeof UseToolInputSchema>;
 
 /**
@@ -390,80 +380,7 @@ Error Handling:
       }
     );
 
-    // Tool 3: Close a toolbox
-    this.server.registerTool(
-      "workbench_close_toolbox",
-      {
-        title: "Close a Toolbox",
-        description: `Close a toolbox and disconnect from its MCP servers.
-
-This tool cleanly disconnects from all MCP servers in the specified toolbox,
-freeing up resources and connections. Use this when you're done working
-with a toolbox.
-
-Closing a toolbox:
-1. Disconnects from each MCP server gracefully
-2. Cleans up client connections and resources
-3. Removes the toolbox from the open state
-
-After closing, you must reopen the toolbox to use its tools again.
-
-Args:
-  - toolbox_name: Name of the toolbox to close
-
-Returns:
-  Success message with cleanup details
-
-Examples:
-  - Use when: Finished working with a set of tools
-  - Use when: Need to free up connections/resources
-  - Use when: Switching between different toolboxes
-
-Error Handling:
-  - Returns error if toolbox is not currently open
-  - Returns error if disconnection fails
-  - Attempts to disconnect all servers even if some fail`,
-        inputSchema: CloseToolboxInputSchema.shape,
-        annotations: {
-          readOnlyHint: false,
-          destructiveHint: false,
-          idempotentHint: true,
-          openWorldHint: true,
-        },
-      },
-      async (args: { [x: string]: any }) => {
-        const params = args as CloseToolboxInput;
-        try {
-          await this.clientManager.closeToolbox(params.toolbox_name);
-
-          // Notify clients that tool list has changed
-          this.server.sendToolListChanged();
-
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: `Successfully closed toolbox '${params.toolbox_name}', unregistered tools, and disconnected from all servers.`,
-              },
-            ],
-          };
-        } catch (error) {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: `Error closing toolbox '${params.toolbox_name}': ${
-                  error instanceof Error ? error.message : String(error)
-                }`,
-              },
-            ],
-            isError: true,
-          };
-        }
-      }
-    );
-
-    // Tool 4: Use a tool (proxy mode) - only if toolMode is 'proxy'
+    // Tool 3: Use a tool (proxy mode) - only if toolMode is 'proxy'
     if (this.config.toolMode === 'proxy') {
       this.server.registerTool(
         "workbench_use_tool",
@@ -567,7 +484,7 @@ Error Handling:
    */
   private async cleanup(): Promise<void> {
     console.error("Shutting down MCP Workbench...");
-    await this.clientManager.closeAll();
+    await this.clientManager.closeAllToolboxes();
   }
 }
 
