@@ -23,16 +23,18 @@ const OpenToolboxInputSchema = z
   })
   .strict();
 
+// Structured tool identifier schema
+const ToolIdentifierSchema = z
+  .object({
+    toolbox: z.string().min(1, "Toolbox name cannot be empty"),
+    server: z.string().min(1, "Server name cannot be empty"),
+    tool: z.string().min(1, "Tool name cannot be empty"),
+  })
+  .strict();
+
 const UseToolInputSchema = z
   .object({
-    toolbox_name: z
-      .string()
-      .min(1)
-      .describe("Name of the toolbox containing the tool"),
-    tool_name: z
-      .string()
-      .min(1)
-      .describe("Server-prefixed tool name (e.g., 'clickhouse-wsw1_run_select_query')"),
+    tool: ToolIdentifierSchema.describe("Structured identifier for the tool to invoke"),
     arguments: z
       .record(z.any())
       .describe("Arguments to pass to the tool")
@@ -44,6 +46,24 @@ const UseToolInputSchema = z
 // Type inference
 type OpenToolboxInput = z.infer<typeof OpenToolboxInputSchema>;
 type UseToolInput = z.infer<typeof UseToolInputSchema>;
+
+// Error message templates for structured tool naming
+const ErrorMessages = {
+  toolboxNotFound: (toolbox: string) =>
+    `Toolbox '${toolbox}' not found`,
+
+  serverNotFound: (server: string, toolbox: string) =>
+    `Server '${server}' not found in toolbox '${toolbox}'`,
+
+  toolNotFound: (toolbox: string, server: string, tool: string) =>
+    `Tool '${tool}' not found in server '${server}' (toolbox '${toolbox}')`,
+
+  invalidToolIdentifier: (field: string) =>
+    `Invalid tool identifier: ${field} cannot be empty`,
+
+  connectionFailed: (server: string, toolbox: string, reason: string) =>
+    `Failed to connect to server '${server}' in toolbox '${toolbox}': ${reason}`,
+};
 
 /**
  * Main server class
@@ -100,13 +120,23 @@ class WorkbenchServer {
       })
       .join("\n\n");
 
-    // Combine header, listings, and footer
+    // Combine header, listings, and footer with structured format example
     return [
       "Available Toolboxes:",
       "",
       listings,
       "",
       "Use open_toolbox to connect to a toolbox, then use_tool to invoke tools.",
+      "",
+      "Example tool invocation:",
+      JSON.stringify({
+        tool: {
+          toolbox: "toolbox-name",
+          server: "server-name",
+          tool: "tool-name"
+        },
+        arguments: { }
+      }, null, 2)
     ].join("\n");
   }
 
@@ -261,45 +291,68 @@ Error Handling:
   - Returns error if toolbox is not open
   - Returns error if tool is not found in the toolbox
   - Propagates errors from the underlying tool`,
-          inputSchema: UseToolInputSchema.shape,
-          annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: false,
-            openWorldHint: true,
-          },
+        inputSchema: UseToolInputSchema.shape,
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: true,
         },
-        async (args: { [x: string]: any }) => {
-          const params = args as UseToolInput;
-          try {
-            // Find the tool in the opened toolbox
-            const { connection, tool } = this.clientManager.findToolInToolbox(
-              params.toolbox_name,
-              params.tool_name
-            );
-
-            // Delegate to the downstream server
-            const result = await connection.client.callTool({
-              name: tool.name,
-              arguments: params.arguments,
-            });
-
-            return result;
-          } catch (error) {
-            return {
-              content: [
-                {
-                  type: "text" as const,
-                  text: `Error executing tool '${params.tool_name}' in toolbox '${params.toolbox_name}': ${
-                    error instanceof Error ? error.message : String(error)
-                  }`,
-                },
-              ],
-              isError: true,
-            };
-          }
+      },
+      async (args: { [x: string]: any }) => {
+        // Validate structured tool identifier with custom error messages
+        const validationResult = UseToolInputSchema.safeParse(args);
+        if (!validationResult.success) {
+          const errors = validationResult.error.errors.map(err => {
+            const field = err.path.join('.');
+            return `${field}: ${err.message}`;
+          }).join('; ');
+          
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `Invalid tool invocation parameters: ${errors}`,
+              },
+            ],
+            isError: true,
+          };
         }
-      );
+
+        const params = validationResult.data;
+        try {
+          // Extract structured tool identifier
+          const { toolbox, server, tool } = params.tool;
+
+          // Find the tool in the opened toolbox using structured lookup
+          const { connection, tool: foundTool } = this.clientManager.findToolInToolbox(
+            toolbox,
+            server,
+            tool
+          );
+
+          // Delegate to the downstream server using original tool name
+          const result = await connection.client.callTool({
+            name: tool,
+            arguments: params.arguments,
+          });
+
+          return result;
+        } catch (error) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `Error executing tool '${params.tool.tool}' in server '${params.tool.server}' (toolbox '${params.tool.toolbox}'): ${
+                  error instanceof Error ? error.message : String(error)
+                }`,
+              },
+            ],
+            isError: true,
+          };
+        }
+      }
+    );
   }
 
   /**

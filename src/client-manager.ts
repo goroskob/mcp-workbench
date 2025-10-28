@@ -15,43 +15,6 @@ export class ClientManager {
   private openedToolboxes: Map<string, OpenedToolbox> = new Map();
 
   /**
-   * Parse a registered tool name to extract toolbox, server, and original tool name
-   * Format: {toolbox}__{server}__{tool}
-   * Example: "dev__filesystem__read_file" => { toolbox: "dev", server: "filesystem", originalTool: "read_file" }
-   */
-  private parseToolName(registeredName: string): { toolbox: string; server: string; originalTool: string } | null {
-    // Split on double underscore, limit to 3 parts
-    const parts = registeredName.split('__', 3);
-
-    // Must have exactly 3 parts
-    if (parts.length !== 3) {
-      return null; // Invalid format
-    }
-
-    const [toolbox, server, originalTool] = parts;
-
-    // All parts must be non-empty
-    if (!toolbox || !server || !originalTool) {
-      return null; // Empty components
-    }
-
-    return {
-      toolbox,
-      server,
-      originalTool
-    };
-  }
-
-  /**
-   * Generate a registered tool name from toolbox, server, and original tool name
-   * Format: {toolbox}__{server}__{tool}
-   * Example: generateToolName("dev", "filesystem", "read_file") => "dev__filesystem__read_file"
-   */
-  private generateToolName(toolboxName: string, serverName: string, originalToolName: string): string {
-    return `${toolboxName}__${serverName}__${originalToolName}`;
-  }
-
-  /**
    * Connect to an MCP server and retrieve its tools
    */
   private async connectToServer(
@@ -212,23 +175,13 @@ export class ClientManager {
 
     for (const [serverName, connection] of connections) {
       for (const tool of connection.tools) {
-        // Apply same prefix as dynamic mode - toolbox__server_tool
-        const prefixedName = this.generateToolName(toolboxName, serverName, tool.name);
-
+        // Use structured metadata instead of concatenated names
         tools.push({
           ...tool,
-          name: prefixedName,  // Prefixed name
-          description: tool.description
-            ? `[${toolboxName}/${serverName}] ${tool.description}`
-            : `Tool from ${toolboxName}/${serverName}`,
-          source_server: serverName,
-          toolbox_name: toolboxName,
-          _meta: {
-            ...tool._meta,
-            source_server: serverName,
-            toolbox_name: toolboxName,
-            original_name: tool.name,  // Store original for reference
-          },
+          name: tool.name,  // Original tool name (not concatenated)
+          description: tool.description,  // Original description (no prefix)
+          source_server: serverName,  // Separate server field
+          toolbox_name: toolboxName,   // Separate toolbox field
         });
       }
     }
@@ -298,7 +251,32 @@ export class ClientManager {
    * Find a tool in an opened toolbox by its name (with or without server prefix)
    * Returns the connection and tool, or throws an error if not found
    */
-  findToolInToolbox(toolboxName: string, toolName: string): { connection: ServerConnection; tool: Tool } {
+  findToolInToolbox(toolboxName: string, serverName: string, toolName: string): { connection: ServerConnection; tool: Tool } {
+    // Lookup toolbox
+    const toolbox = this.openedToolboxes.get(toolboxName);
+    if (!toolbox) {
+      throw new Error(`Toolbox '${toolboxName}' not found`);
+    }
+
+    // Lookup server connection within toolbox
+    const connection = toolbox.connections.get(serverName);
+    if (!connection) {
+      throw new Error(`Server '${serverName}' not found in toolbox '${toolboxName}'`);
+    }
+
+    // Find tool in server's tools array
+    const tool = connection.tools.find(t => t.name === toolName);
+    if (!tool) {
+      throw new Error(`Tool '${toolName}' not found in server '${serverName}' (toolbox '${toolboxName}')`);
+    }
+
+    return { connection, tool };
+  }
+
+  /**
+   * @deprecated Old method signature for backward compatibility during migration
+   */
+  private findToolInToolboxOld(toolboxName: string, toolName: string): { connection: ServerConnection; tool: Tool } {
     const toolbox = this.openedToolboxes.get(toolboxName);
     if (!toolbox) {
       throw new Error(`Toolbox '${toolboxName}' is not currently open. Please open it first with workbench_open_toolbox.`);

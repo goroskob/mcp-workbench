@@ -1,25 +1,25 @@
 <!--
 Sync Impact Report:
-Version: 1.6.0 (Remove dynamic mode, rename meta-tools)
+Version: 1.7.0 (Structured tool naming)
 Modified Principles:
-  - I. Meta-Server Orchestration Pattern - Removed dynamic mode, updated meta-tools to `open_toolbox` and `use_tool` (dropped `workbench_` prefix), simplified to proxy-only operation
-  - II. Tool Naming and Conflict Resolution - Removed mode-specific language
-  - III. Proxy-Based Tool Invocation - Renamed from "Mode-Agnostic Tool Invocation", removed dynamic mode entirely, simplified to proxy-only description
+  - II. Tool Naming and Conflict Resolution - Replaced string-based concatenation with structured objects { toolbox, server, tool }
+  - III. Proxy-Based Tool Invocation - Updated use_tool parameter format to accept structured tool identifiers
 Added Sections: N/A
 Removed Sections: N/A
 Templates Requiring Updates:
-  ✅ plan-template.md - No changes needed (mode removal is implementation-specific)
+  ✅ plan-template.md - No changes needed (implementation-specific)
   ✅ spec-template.md - No changes needed (feature-specific changes)
   ✅ tasks-template.md - No changes needed (task structure unchanged)
-  ⏳ README.md - Needs update (remove dynamic mode references, update tool names)
-  ⏳ CLAUDE.md - Needs update (remove dynamic mode architecture, update tool names)
-  ⏳ CHANGELOG.md - Needs update for v0.10.0 release with breaking changes
+  ⏳ README.md - Needs update (structured naming examples)
+  ⏳ CLAUDE.md - Needs update (structured naming architecture)
+  ⏳ CHANGELOG.md - Needs update for v0.11.0 release with breaking changes
 Follow-up TODOs:
-  - Update README.md to remove all dynamic mode references and rename tools
-  - Update CLAUDE.md architecture documentation for proxy-only mode
-  - Update CHANGELOG.md with breaking change notice for v0.10.0
-  - Verify tool renaming works correctly with MCP clients
+  - Update README.md with structured naming examples
+  - Update CLAUDE.md architecture documentation for structured approach
+  - Update CHANGELOG.md with breaking change notice for v0.11.0
+  - Verify structured tool naming works correctly with MCP clients
 Previous Versions:
+  - 1.6.0 (2025-10-28): Remove dynamic mode, rename meta-tools
   - 1.5.0 (2025-10-27): Initialization instructions for toolbox discovery
   - 1.4.0 (2025-10-27): Simplified toolbox lifecycle - removed manual close operations
   - 1.3.0 (2025-10-27): Added release policy principle and enhanced development workflow
@@ -47,31 +47,31 @@ The MCP Workbench is a meta-MCP server that MUST act as both an MCP server (expo
 
 ### II. Tool Naming and Conflict Resolution
 
-All downstream tools MUST be prefixed with both their toolbox and source server name using the pattern `{toolbox}__{server}__{tool}` (consistent double underscores) to prevent naming conflicts:
+All downstream tools MUST be identified using structured objects with three required fields to prevent naming conflicts:
 
-- Toolbox and server-prefixed naming is MANDATORY
-- Double underscore `__` MUST separate all components (toolbox, server, tool)
-- Tool names MUST be deterministic and predictable
-- Original tool names MUST be preserved in metadata for delegation
-- Tool descriptions MUST be prefixed with `[toolbox/server]` to indicate origin
+- Tool identification MUST use structured format: `{ toolbox: string, server: string, tool: string }`
+- All three fields (toolbox, server, tool) are MANDATORY and MUST be non-empty strings
+- Tool identifiers MUST be deterministic and predictable from separate components
+- Original tool names MUST be preserved in metadata for delegation to downstream servers
+- Tool metadata MUST include separate `toolbox_name`, `source_server`, and `name` fields
 
 **Examples**:
-- Toolbox "dev", server "filesystem", tool "read_file" → `dev__filesystem__read_file`
-- Toolbox "prod", server "filesystem", tool "read_file" → `prod__filesystem__read_file`
+- Toolbox "dev", server "filesystem", tool "read_file" → `{ toolbox: "dev", server: "filesystem", tool: "read_file" }`
+- Toolbox "prod", server "filesystem", tool "read_file" → `{ toolbox: "prod", server: "filesystem", tool: "read_file" }`
 
-**Rationale**: Three-level naming (toolbox + server + tool) with consistent double-underscore separators prevents conflicts between duplicate MCP server instances across multiple toolboxes while maintaining clarity about tool provenance and simplifying parsing logic. This enables multiple toolboxes to use the same MCP server without naming collisions, supporting development/production isolation and multi-environment workflows.
+**Rationale**: Structured three-level naming (toolbox + server + tool) prevents conflicts between duplicate MCP server instances across multiple toolboxes while maintaining clarity about tool provenance and eliminating string parsing ambiguity. This enables multiple toolboxes to use the same MCP server without naming collisions, supporting development/production isolation and multi-environment workflows. The structured format makes tool identification explicit and prevents issues with special characters in tool names.
 
 ### III. Proxy-Based Tool Invocation
 
 The workbench operates exclusively in proxy mode, where all tool invocation flows through the `use_tool` meta-tool:
 
 - Tools MUST be returned with full schemas via `open_toolbox` but NOT dynamically registered
-- Tool invocation MUST occur via the `use_tool` meta-tool with explicit toolbox and tool names
-- Tool names MUST follow the `{toolbox}__{server}__{tool}` naming convention
-- All tool calls MUST delegate to downstream servers using original tool names
+- Tool invocation MUST occur via the `use_tool` meta-tool with structured tool identifier: `{ tool: { toolbox, server, tool }, arguments }`
+- Tool metadata MUST use separate fields (toolbox_name, source_server, name) not concatenated strings
+- All tool calls MUST delegate to downstream servers using original tool names from the structured identifier
 - Tool filters from configuration MUST be applied during toolbox opening
 
-**Rationale**: Proxy-only operation simplifies the architecture, eliminates mode-specific code paths, and provides a consistent invocation pattern across all MCP clients. This design trades dynamic tool registration convenience for reduced complexity and clearer separation between meta-tools and downstream tools.
+**Rationale**: Proxy-only operation with structured identifiers simplifies the architecture, eliminates mode-specific code paths and string parsing logic, and provides a consistent invocation pattern across all MCP clients. This design trades dynamic tool registration convenience for reduced complexity, clearer separation between meta-tools and downstream tools, and elimination of parsing ambiguity.
 
 ### IV. Configuration as Contract
 
@@ -250,4 +250,4 @@ When constitution is updated:
 5. Update CLAUDE.md if architectural principles change
 6. Update README.md if user-facing guidance changes
 
-**Version**: 1.4.0 | **Ratified**: 2025-10-24 | **Last Amended**: 2025-10-28
+**Version**: 1.7.0 | **Ratified**: 2025-10-24 | **Last Amended**: 2025-10-28
