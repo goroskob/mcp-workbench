@@ -12,6 +12,10 @@ import { z } from "zod";
 import { loadConfig } from "./config-loader.js";
 import { ClientManager } from "./client-manager.js";
 import { WorkbenchConfig, OpenToolboxResult } from "./types.js";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const pkg = require("../package.json");
 
 // Zod schemas for tool inputs
 const OpenToolboxInputSchema = z
@@ -79,7 +83,7 @@ class WorkbenchServer {
     this.server = new McpServer(
       {
         name: "mcp-workbench",
-        version: "0.2.0",
+        version: pkg.version,
       },
       {
         capabilities: {

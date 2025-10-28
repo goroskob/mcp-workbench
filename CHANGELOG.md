@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.2] - 2025-10-28
+
+### Fixed
+
+- MCP server initialization now dynamically loads version from package.json
+  - Replaced hardcoded version "0.2.0" with dynamic import from package.json
+  - Version automatically syncs with package.json on each release
+  - Uses Node.js `createRequire` for compatibility with ES modules
+
 ## [0.11.1] - 2025-10-28
 
 ### Fixed
