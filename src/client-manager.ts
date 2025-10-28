@@ -161,12 +161,19 @@ export class ClientManager {
     const connections = new Map<string, ServerConnection>();
 
     try {
-      // Connect to servers sequentially to avoid resource contention
-      // (especially important for Docker-based servers)
+      // Connect to all servers in parallel for faster startup
       const serverEntries = Object.entries(toolboxConfig.mcpServers);
+      const connectionPromises = serverEntries.map(([serverName, serverConfig]) =>
+        this.connectToServer(serverName, serverConfig).then(connection => ({
+          serverName,
+          connection
+        }))
+      );
 
-      for (const [serverName, serverConfig] of serverEntries) {
-        const connection = await this.connectToServer(serverName, serverConfig);
+      const results = await Promise.all(connectionPromises);
+
+      // Build connections map from results
+      for (const { serverName, connection } of results) {
         connections.set(serverName, connection);
       }
     } catch (error) {
