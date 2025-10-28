@@ -7,6 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2025-10-28
+
+### BREAKING CHANGES
+
+**Structured tool naming** - Tool identification has been completely reworked to use structured objects instead of concatenated strings.
+
+**`use_tool` parameter format changed**:
+- **Old**: `{ toolbox_name: string, tool_name: string, arguments?: object }`
+- **New**: `{ tool: { toolbox: string, server: string, tool: string }, arguments?: object }`
+
+**`open_toolbox` response format changed**:
+- Tools now have separate `toolbox_name`, `source_server`, and `name` fields
+- The `name` field now contains the original tool name (e.g., `"read_file"`) instead of concatenated format (e.g., `"dev__filesystem__read_file"`)
+
+### Changed
+
+- **BREAKING**: `use_tool` meta-tool now accepts structured tool identifier with three required fields:
+  - `tool.toolbox`: Toolbox name containing the tool
+  - `tool.server`: MCP server name providing the tool
+  - `tool.tool`: Original tool name from downstream server
+- **BREAKING**: `open_toolbox` response now returns tools with separate structured metadata fields
+  - `toolbox_name`: Name of the toolbox
+  - `source_server`: Name of the MCP server
+  - `name`: Original tool name (not concatenated)
+- Internal: Removed `parseToolName()` and `generateToolName()` methods (string parsing no longer needed)
+- Internal: Updated `ToolInfo` interface to use separate fields instead of concatenated names
+- Internal: Removed `registeredTools` map from `OpenedToolbox` (lookup now uses structured identifiers)
+- Error messages now reference toolbox, server, and tool names as separate components
+- Tool routing logic simplified - no string parsing, direct structured lookups
+
+### Migration Guide
+
+**For MCP Client Users:**
+
+1. **Update `use_tool` calls to use structured format:**
+   ```diff
+   - {
+   -   "toolbox_name": "dev",
+   -   "tool_name": "dev__filesystem__read_file",
+   -   "arguments": { "path": "/file" }
+   - }
+   + {
+   +   "tool": {
+   +     "toolbox": "dev",
+   +     "server": "filesystem",
+   +     "tool": "read_file"
+   +   },
+   +   "arguments": { "path": "/file" }
+   + }
+   ```
+
+2. **Update code that parses `open_toolbox` response:**
+   ```diff
+   - const toolName = tool.name; // "dev__filesystem__read_file"
+   - const parts = toolName.split('__');
+   + const toolIdentifier = {
+   +   toolbox: tool.toolbox_name,  // "dev"
+   +   server: tool.source_server,  // "filesystem"
+   +   tool: tool.name              // "read_file"
+   + };
+   ```
+
+3. **Remove any string concatenation/parsing logic** - Tool identifiers are now structured objects
+
+**No backward compatibility** - This is a clean break from string-based naming. All clients must upgrade to structured format.
+
+**Configuration changes**: None - workbench-config.json format is unchanged
+
 ## [0.10.0] - 2025-10-28
 
 ### BREAKING CHANGES

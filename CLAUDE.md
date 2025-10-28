@@ -181,27 +181,32 @@ The workbench exposes 1-2 meta-tools depending on the configured `toolMode`:
 **Proxy-Only Mode Only:**
 2. **use_tool** - Executes a tool from an opened toolbox by delegating to the downstream server (only registered when `toolMode: "proxy"`)
 
-### Tool Naming Convention
+### Tool Identification (Structured Format)
 
-When a toolbox is opened, downstream tools are registered with the format: `{toolbox}__{server}__{tool_name}` (note: consistent double underscores between all components)
+Tools are identified using structured objects with three required fields:
+
+```typescript
+{
+  toolbox: string;  // Toolbox containing this tool
+  server: string;   // MCP server providing this tool
+  tool: string;     // Original tool name
+}
+```
 
 **Example:**
 - Toolbox name: `dev`
 - Server name: `filesystem`
 - Original tool: `read_file`
-- Registered as: `dev__filesystem__read_file`
+- Structured identifier: `{ toolbox: "dev", server: "filesystem", tool: "read_file" }`
 
-**Format Details:**
-- Double underscore `__` separates all components (toolbox, server, tool)
-- Example with multiple toolboxes:
-  - `dev__filesystem__read_file` → delegates to dev toolbox's filesystem server
-  - `prod__filesystem__read_file` → delegates to prod toolbox's filesystem server
-
-This prefixing strategy:
-- Avoids name conflicts between toolboxes with duplicate servers
-- Makes tool origin clear (toolbox and server)
+**Benefits of Structured Format:**
+- Eliminates parsing ambiguity (no string splitting on `__`)
+- Handles special characters in tool names without issues
+- Makes tool origin explicit (separate toolbox/server fields)
 - Enables multiple instances of the same server in different toolboxes
-- Provides consistent, predictable naming
+- Provides type-safe tool identification with validation
+
+**Breaking Change from v0.10.0**: Previously used concatenated strings (`{toolbox}__{server}__{tool}`), now uses structured objects throughout the codebase.
 
 ## Configuration Format
 
@@ -447,6 +452,7 @@ If you need different behavior, modify the `generateToolName()` and `parseToolNa
 - TypeScript 5.7.2, Node.js 18+ + @modelcontextprotocol/sdk ^1.6.1, zod ^3.23.8 (004-remove-manual-close)
 - N/A (in-memory state management only) (004-remove-manual-close)
 - TypeScript 5.7.2 with ES2022 target, Node.js 18+ + @modelcontextprotocol/sdk ^1.6.1, zod ^3.23.8 (006-remove-dynamic-mode)
+- TypeScript 5.7.2 with ES2022 target, Node.js 18+ + @modelcontextprotocol/sdk ^1.6.1, zod ^3.23.8 (validation) (007-structured-tool-names)
 
 ## Recent Changes
 - 001-duplicate-tools-support: Added TypeScript 5.7.2 with ES2022 target, Node.js 18+ runtime + @modelcontextprotocol/sdk ^1.6.1, zod ^3.23.8 for validation

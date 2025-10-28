@@ -48,6 +48,18 @@ export interface WorkbenchConfig {
 }
 
 /**
+ * Structured tool identifier with three required components
+ */
+export interface ToolIdentifier {
+  /** Toolbox name containing the tool */
+  readonly toolbox: string;
+  /** MCP server name providing the tool */
+  readonly server: string;
+  /** Original tool name from the downstream MCP server */
+  readonly tool: string;
+}
+
+/**
  * Information about a tool including its source server
  */
 export interface ToolInfo extends Tool {
