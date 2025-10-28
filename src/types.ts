@@ -64,9 +64,9 @@ export interface ToolIdentifier {
  */
 export interface ToolInfo extends Tool {
   /** Name of the MCP server that provides this tool */
-  source_server: string;
+  server: string;
   /** Name of the toolbox this tool belongs to */
-  toolbox_name: string;
+  toolbox: string;
 }
 
 /**

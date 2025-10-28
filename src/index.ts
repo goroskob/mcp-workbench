@@ -20,7 +20,7 @@ const pkg = require("../package.json");
 // Zod schemas for tool inputs
 const OpenToolboxInputSchema = z
   .object({
-    toolbox_name: z
+    toolbox: z
       .string()
       .min(1)
       .describe("Name of the toolbox to open (e.g., 'incident-analysis', 'gitlab-workflow')"),
@@ -167,7 +167,7 @@ Use use_tool to execute tools by their server-prefixed names.
 If the toolbox is already open, returns the cached information (idempotent operation).
 
 Args:
-  - toolbox_name: Name of the toolbox to open (from initialization instructions)
+  - toolbox: Name of the toolbox to open (from initialization instructions)
 
 Returns:
   JSON format:
@@ -178,8 +178,8 @@ Returns:
     "tools": [
       {
         "name": string,             // Server-prefixed tool name (e.g., "clickhouse-wsw1_run_select_query")
-        "source_server": string,    // Which MCP server provides this
-        "toolbox_name": string,     // Toolbox this tool belongs to
+        "server": string,           // Which MCP server provides this
+        "toolbox": string,          // Toolbox this tool belongs to
         "description": string,      // What the tool does (prefixed with [server])
         "inputSchema": object,      // JSON schema for parameters
         "annotations": object       // Tool hints (readOnly, etc.)
@@ -214,14 +214,14 @@ Error Handling:
       async (args: { [x: string]: any }) => {
         const params = args as OpenToolboxInput;
         try {
-          const toolboxConfig = this.config.toolboxes[params.toolbox_name];
+          const toolboxConfig = this.config.toolboxes[params.toolbox];
           if (!toolboxConfig) {
             const available = Object.keys(this.config.toolboxes).join(", ");
             return {
               content: [
                 {
                   type: "text" as const,
-                  text: `Error: Toolbox '${params.toolbox_name}' not found. Available toolboxes: ${available}`,
+                  text: `Error: Toolbox '${params.toolbox}' not found. Available toolboxes: ${available}`,
                 },
               ],
               isError: true,
@@ -230,12 +230,12 @@ Error Handling:
 
           // Open the toolbox (connects to servers and returns tool list)
           const { connections, tools } = await this.clientManager.openToolbox(
-            params.toolbox_name,
+            params.toolbox,
             toolboxConfig
           );
 
           const result: OpenToolboxResult = {
-            toolbox: params.toolbox_name,
+            toolbox: params.toolbox,
             description: toolboxConfig.description,
             servers_connected: connections.size,
             tools,
@@ -254,7 +254,7 @@ Error Handling:
             content: [
               {
                 type: "text" as const,
-                text: `Error opening toolbox '${params.toolbox_name}': ${
+                text: `Error opening toolbox '${params.toolbox}': ${
                   error instanceof Error ? error.message : String(error)
                 }`,
               },

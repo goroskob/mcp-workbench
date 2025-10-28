@@ -175,7 +175,7 @@ When a toolbox is opened, tool information is returned but tools are **not dynam
 - `ToolboxConfig`, `McpServerConfig`, `WorkbenchServerConfig` - Define toolbox and server configurations
 - `ServerConnection` - Tracks MCP client instances, transports, and cached tools
 - `OpenedToolbox` - Represents runtime state with connections and `registeredTools` map (proxy-only mode only)
-- `ToolInfo` - Extends MCP SDK's `Tool` type with `source_server`, `toolbox_name`, and `original_name` metadata
+- `ToolInfo` - Extends MCP SDK's `Tool` type with `server` and `toolbox` metadata
 - `OpenToolboxResult` - Return type varies by mode:
   - **Proxy mode**: Contains full `tools: ToolInfo[]` array with schemas
   - **Dynamic mode**: Contains `tools_registered: number` count (tools are registered, not returned)
@@ -253,7 +253,7 @@ The server requires a `workbench-config.json` file with this structure:
 - **toolMode** (optional, top-level): Tool invocation mode - `"dynamic"` (default) or `"proxy"`
   - **dynamic**: Tools are dynamically registered on the workbench server and appear in MCP client's tool list
   - **proxy**: Tools are accessed via `use_tool` meta-tool (for clients without dynamic registration support)
-- **toolbox_name**: Used as identifier in tool calls
+- **toolbox**: Used as identifier in tool calls
 - **mcpServers**: Uses the **standard MCP configuration schema** (compatible with Claude Desktop/.claude.json)
   - Keys are server names (unique identifiers, used as tool name prefix)
   - Values follow the standard MCP server config: `command`, `args`, `env`
@@ -388,9 +388,9 @@ When `open_toolbox` is called:
 6. Toolbox remains open until server shutdown
 
 When `use_tool` is called:
-1. MCP client specifies `toolbox_name`, `tool_name` (prefixed), and `arguments`
+1. MCP client specifies structured tool identifier (`toolbox`, `server`, `tool`) and `arguments`
 2. Workbench finds the appropriate server connection and original tool name
-3. Delegates to downstream server: `client.callTool({ name: original_name, arguments })`
+3. Delegates to downstream server: `client.callTool({ name: tool, arguments })`
 4. Returns downstream response directly
 
 When server shuts down (SIGINT/SIGTERM):

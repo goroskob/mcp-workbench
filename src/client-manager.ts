@@ -180,8 +180,8 @@ export class ClientManager {
           ...tool,
           name: tool.name,  // Original tool name (not concatenated)
           description: tool.description,  // Original description (no prefix)
-          source_server: serverName,  // Separate server field
-          toolbox_name: toolboxName,   // Separate toolbox field
+          server: serverName,  // Separate server field
+          toolbox: toolboxName,   // Separate toolbox field
         });
       }
     }

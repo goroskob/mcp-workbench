@@ -1,19 +1,19 @@
 <!--
 Sync Impact Report:
-Version: 1.8.0 (Incubation stage policy)
+Version: 1.9.0 (Standardized naming)
 Modified Principles:
-  - VI. Release Policy and Workflow - Added version bump guidelines section specifying relaxed semver during incubation
-Added Sections:
-  - VII. Incubation Stage Policy - New principle defining pre-1.0.0 incubation rules
+  - II. Tool Naming and Conflict Resolution - Updated field names from `toolbox_name`, `source_server`, `name` to `toolbox`, `server`, `tool` for consistency
+Added Sections: N/A
 Removed Sections: N/A
 Templates Requiring Updates:
   ✅ plan-template.md - No changes needed (implementation-specific)
   ✅ spec-template.md - No changes needed (feature-specific changes)
   ✅ tasks-template.md - No changes needed (task structure unchanged)
-  ✅ README.md - Added incubation warning badge and Versioning Policy section
-  ✅ CLAUDE.md - Updated release workflow section with detailed incubation policy
+  ✅ README.md - Updated all examples with standardized names
+  ✅ CLAUDE.md - Updated type system docs and examples with standardized names
 Follow-up TODOs: None - all updates completed
 Previous Versions:
+  - 1.8.0 (2025-10-28): Incubation stage policy
   - 1.7.0 (2025-10-28): Structured tool naming
   - 1.6.0 (2025-10-28): Remove dynamic mode, rename meta-tools
   - 1.5.0 (2025-10-27): Initialization instructions for toolbox discovery
@@ -49,7 +49,7 @@ All downstream tools MUST be identified using structured objects with three requ
 - All three fields (toolbox, server, tool) are MANDATORY and MUST be non-empty strings
 - Tool identifiers MUST be deterministic and predictable from separate components
 - Original tool names MUST be preserved in metadata for delegation to downstream servers
-- Tool metadata MUST include separate `toolbox_name`, `source_server`, and `name` fields
+- Tool metadata MUST include separate `toolbox`, `server`, and `tool` fields
 
 **Examples**:
 - Toolbox "dev", server "filesystem", tool "read_file" → `{ toolbox: "dev", server: "filesystem", tool: "read_file" }`
@@ -63,7 +63,7 @@ The workbench operates exclusively in proxy mode, where all tool invocation flow
 
 - Tools MUST be returned with full schemas via `open_toolbox` but NOT dynamically registered
 - Tool invocation MUST occur via the `use_tool` meta-tool with structured tool identifier: `{ tool: { toolbox, server, tool }, arguments }`
-- Tool metadata MUST use separate fields (toolbox_name, source_server, name) not concatenated strings
+- Tool metadata MUST use separate fields (`toolbox`, `server`, `tool`) not concatenated strings
 - All tool calls MUST delegate to downstream servers using original tool names from the structured identifier
 - Tool filters from configuration MUST be applied during toolbox opening
 
@@ -299,4 +299,4 @@ When constitution is updated:
 5. Update CLAUDE.md if architectural principles change
 6. Update README.md if user-facing guidance changes
 
-**Version**: 1.8.0 | **Ratified**: 2025-10-24 | **Last Amended**: 2025-10-28
+**Version**: 1.9.0 | **Ratified**: 2025-10-24 | **Last Amended**: 2025-10-28
