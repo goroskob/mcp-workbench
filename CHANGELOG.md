@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2025-10-28
+
+### Removed
+- **BREAKING**: Removed `workbench_close_toolbox` meta-tool from the API
+  - Toolboxes now remain open until server shutdown
+  - Automatic cleanup of all connections when server receives SIGINT/SIGTERM
+  - This simplifies the API surface and workflow
+
+### Changed
+- Toolbox open operations are now idempotent (calling open on an already-open toolbox returns immediately)
+- Signal handlers (SIGINT/SIGTERM) now automatically close all open toolboxes before shutdown
+- Meta-tool count reduced: 2 meta-tools in dynamic mode (was 3), 3 in proxy mode (was 4)
+
+### Migration Guide
+
+**For MCP Client Users:**
+
+If you are using `workbench_close_toolbox` in your workflows:
+
+**Before (v0.7.x):**
+```javascript
+// Open toolbox
+await client.callTool({ name: "workbench_open_toolbox", arguments: { toolbox_name: "dev" } });
+
+// Use tools...
+await client.callTool({ name: "dev__filesystem__read_file", arguments: { path: "..." } });
+
+// Close toolbox when done
+await client.callTool({ name: "workbench_close_toolbox", arguments: { toolbox_name: "dev" } });
+```
+
+**After (v0.8.0+):**
+```javascript
+// Open toolbox
+await client.callTool({ name: "workbench_open_toolbox", arguments: { toolbox_name: "dev" } });
+
+// Use tools...
+await client.callTool({ name: "dev__filesystem__read_file", arguments: { path: "..." } });
+
+// No manual close needed - toolboxes remain open until server shutdown
+// Automatic cleanup happens when server receives SIGINT/SIGTERM
+```
+
+**Action Required:**
+- **Remove all calls to `workbench_close_toolbox`** from your code
+- Toolboxes will remain open until the MCP Workbench server shuts down
+- All connections are automatically cleaned up on server shutdown (within 5 seconds)
+
+## [0.7.3] - 2025-10-27
+
+### Fixed
+- Reverted to parallel server connections for faster startup (from sequential in 0.7.2)
+- Resolved race conditions without sacrificing startup performance
+
+## [0.7.2] - 2025-10-27
+
+### Fixed
+- Changed parallel to sequential server connections to avoid race conditions
+
+## [0.7.1] - 2025-10-27
+
 ### Added
 - Support for multiple toolboxes with duplicate MCP server instances
   - Multiple toolboxes can now have servers with the same name

@@ -1,22 +1,22 @@
 <!--
 Sync Impact Report:
-Version: 1.3.0 (Added release policy principle and enhanced development workflow)
+Version: 1.4.0 (Simplified toolbox lifecycle - removed manual close operations)
 Modified Principles:
-  - Development Workflow section - Restructured and expanded with new Release Policy principle
-Added Sections:
-  - VI. Release Policy and Workflow - New principle governing release procedures
+  - I. Meta-Server Orchestration Pattern - Updated meta-tool counts (3→2 dynamic, 4→3 proxy), removed close_toolbox, added idempotent open requirement, changed cleanup from "when toolboxes close" to "when server shuts down"
+Added Sections: N/A
 Removed Sections: N/A
 Templates Requiring Updates:
-  ✅ plan-template.md - No changes needed (release policy not template-specific)
-  ✅ spec-template.md - No changes needed (release policy not template-specific)
-  ✅ tasks-template.md - No changes needed (release policy not template-specific)
-  ✅ README.md - No changes needed (release policy is governance, not user-facing)
-  ✅ CLAUDE.md - No changes needed (existing release workflow docs sufficient)
-  ✅ CHANGELOG.md - Up to date with v0.5.0
+  ✅ plan-template.md - No changes needed (meta-tool changes reflected in implementations)
+  ✅ spec-template.md - No changes needed (feature-specific changes)
+  ✅ tasks-template.md - No changes needed (task structure unchanged)
+  ✅ README.md - Updated (removed close_toolbox documentation, updated workflow examples)
+  ✅ CLAUDE.md - Updated (removed close_toolbox from meta-tools, updated lifecycle patterns)
+  ⏳ CHANGELOG.md - Needs update for v0.8.0 release
 Follow-up TODOs:
-  - Consider adding GitHub branch protection rules for additional enforcement
-  ✅ Updated .github/workflows/release.yml with automated branch ancestry check
+  - Update CHANGELOG.md with breaking change notice for v0.8.0
+  - Verify all downstream MCP servers work with automatic cleanup
 Previous Versions:
+  - 1.3.0 (2025-10-27): Added release policy principle and enhanced development workflow
   - 1.2.0 (2025-10-27): Updated tool naming convention to use consistent double underscores
   - 1.1.0 (2025-10-27): Updated tool naming to support duplicate servers across toolboxes
   - 1.0.0 (2025-10-24): Initial constitution
@@ -30,13 +30,14 @@ Previous Versions:
 
 The MCP Workbench is a meta-MCP server that MUST act as both an MCP server (exposing meta-tools) and an MCP client (connecting to downstream servers). This dual nature is non-negotiable:
 
-- MUST expose exactly 3 meta-tools in dynamic mode: `workbench_list_toolboxes`, `workbench_open_toolbox`, `workbench_close_toolbox`
-- MUST expose exactly 4 meta-tools in proxy mode: the above three plus `workbench_use_tool`
+- MUST expose exactly 2 meta-tools in dynamic mode: `workbench_list_toolboxes`, `workbench_open_toolbox`
+- MUST expose exactly 3 meta-tools in proxy mode: the above two plus `workbench_use_tool`
 - MUST NOT create downstream connections at startup (lazy connection management)
 - MUST support multiple simultaneously open toolboxes
-- MUST properly clean up connections when toolboxes close
+- MUST support idempotent open operations (calling open on already-open toolbox returns immediately)
+- MUST properly clean up all connections when server shuts down (SIGINT/SIGTERM)
 
-**Rationale**: The meta-server pattern enables efficient resource management and domain-organized tool discovery without coupling the workbench to specific downstream implementations.
+**Rationale**: The meta-server pattern enables efficient resource management and domain-organized tool discovery without coupling the workbench to specific downstream implementations. Automatic cleanup on shutdown simplifies the API and prevents resource leaks while reducing cognitive burden on users.
 
 ### II. Tool Naming and Conflict Resolution
 
@@ -246,4 +247,4 @@ When constitution is updated:
 5. Update CLAUDE.md if architectural principles change
 6. Update README.md if user-facing guidance changes
 
-**Version**: 1.3.0 | **Ratified**: 2025-10-24 | **Last Amended**: 2025-10-27
+**Version**: 1.4.0 | **Ratified**: 2025-10-24 | **Last Amended**: 2025-10-28

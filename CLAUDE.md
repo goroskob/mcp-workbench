@@ -88,7 +88,7 @@ For automated npm publishing to work, the repository must have:
 MCP Client → Workbench Server (calls registered tool) → Client Manager → Downstream MCP Server(s)
 ```
 
-The workbench acts as both an **MCP server** (exposes 3-4 meta-tools depending on mode) and an **MCP client** (connects to downstream servers).
+The workbench acts as both an **MCP server** (exposes 2-3 meta-tools depending on mode) and an **MCP client** (connects to downstream servers).
 
 ### Tool Invocation Modes
 
@@ -100,7 +100,8 @@ When a toolbox is opened, downstream tools are **dynamically registered** on the
 - No proxy layer needed - tools are called directly by name
 - Better IDE integration and discoverability
 - `workbench_open_toolbox` returns a count of registered tools
-- **Workbench exposes 3 meta-tools**: `workbench_list_toolboxes`, `workbench_open_toolbox`, `workbench_close_toolbox`
+- Toolboxes remain open until server shutdown (automatic cleanup)
+- **Workbench exposes 2 meta-tools**: `workbench_list_toolboxes`, `workbench_open_toolbox`
 
 #### Proxy Mode (`toolMode: "proxy"`)
 When a toolbox is opened, tool information is returned but tools are **not dynamically registered**. Instead:
@@ -108,17 +109,18 @@ When a toolbox is opened, tool information is returned but tools are **not dynam
 - MCP client explicitly specifies toolbox name, tool name, and arguments
 - Designed for MCP clients that don't support dynamic tool registration
 - `workbench_open_toolbox` returns full tool list with schemas
-- **Workbench exposes 4 meta-tools**: `workbench_list_toolboxes`, `workbench_open_toolbox`, `workbench_close_toolbox`, `workbench_use_tool`
+- Toolboxes remain open until server shutdown (automatic cleanup)
+- **Workbench exposes 3 meta-tools**: `workbench_list_toolboxes`, `workbench_open_toolbox`, `workbench_use_tool`
 
 **Tool naming is consistent in both modes**: Tools are always identified with the `{toolbox}__{server}__{tool}` prefix to avoid conflicts.
 
 ### Core Components
 
 **src/index.ts** - Main MCP server
-- Implements 3 workbench meta-tools: `list_toolboxes`, `open_toolbox`, `close_toolbox`
-- Manages server lifecycle (initialization, cleanup on SIGINT/SIGTERM)
+- Implements 2-3 workbench meta-tools (2 in dynamic mode, 3 in proxy mode): `list_toolboxes`, `open_toolbox`, and `use_tool` (proxy mode only)
+- Manages server lifecycle (initialization, automatic cleanup on SIGINT/SIGTERM)
 - Loads configuration via `config-loader.ts`
-- Sends `tool list changed` notifications when toolboxes open/close
+- Sends `tool list changed` notifications when toolboxes open
 
 **src/client-manager.ts** - MCP client connection pool and tool registry
 - Opens/closes connections to downstream MCP servers as MCP clients
@@ -163,18 +165,17 @@ When a toolbox is opened, tool information is returned but tools are **not dynam
 
 ### The Workbench Meta-Tools
 
-The workbench exposes 3-4 meta-tools depending on the configured `toolMode`:
+The workbench exposes 2-3 meta-tools depending on the configured `toolMode`:
 
 **Always Available (Both Modes):**
 1. **workbench_list_toolboxes** - Lists configured toolboxes (read-only, no connections made)
-2. **workbench_open_toolbox** - Connects to all MCP servers in a toolbox
+2. **workbench_open_toolbox** - Connects to all MCP servers in a toolbox (idempotent - safe to call multiple times)
    - **Dynamic mode**: Registers tools with prefixed names, sends tool list changed notification, returns tools_registered count
    - **Proxy mode**: Returns full tool list with schemas for use with `workbench_use_tool`
-3. **workbench_close_toolbox** - Disconnects all servers in a toolbox, sends tool list changed notification
-   - **Dynamic mode**: Also unregisters all dynamically registered tools
+   - Toolboxes remain open until server shutdown with automatic cleanup
 
 **Proxy Mode Only:**
-4. **workbench_use_tool** - Executes a tool from an opened toolbox by delegating to the downstream server (only registered when `toolMode: "proxy"`)
+3. **workbench_use_tool** - Executes a tool from an opened toolbox by delegating to the downstream server (only registered when `toolMode: "proxy"`)
 
 ### Tool Naming Convention
 
@@ -300,19 +301,21 @@ Becomes (after expansion):
 ### Lazy Connection Management
 Connections are **not** created at server startup. They're created when `workbench_open_toolbox` is called, allowing:
 - Multiple toolboxes can be open simultaneously
-- Resources freed by closing unused toolboxes
-- Fresh tool discovery on each open
+- Idempotent opens (safe to call multiple times on same toolbox)
+- Toolboxes remain open until server shutdown with automatic cleanup
 
 ### Tool Registration and Invocation Patterns
 
 #### Dynamic Mode (Default)
 When `workbench_open_toolbox` is called:
-1. Connects to all downstream MCP servers
-2. Queries `tools/list` from each server
-3. Registers each tool on workbench server with prefixed name (`{toolbox}__{server}__{tool}`)
-4. Creates handler that delegates to downstream server via `client.callTool()`
-5. Sends `tool list changed` notification to MCP clients
-6. Returns `tools_registered` count
+1. Checks if toolbox already open (idempotent - returns immediately if yes)
+2. Connects to all downstream MCP servers
+3. Queries `tools/list` from each server
+4. Registers each tool on workbench server with prefixed name (`{toolbox}__{server}__{tool}`)
+5. Creates handler that delegates to downstream server via `client.callTool()`
+6. Sends `tool list changed` notification to MCP clients
+7. Returns `tools_registered` count
+8. Toolbox remains open until server shutdown
 
 When a registered tool is called:
 1. MCP client calls tool by prefixed name (e.g., `main__filesystem__read_file`)
@@ -321,17 +324,20 @@ When a registered tool is called:
 4. Delegates to downstream server: `client.callTool({ name: "read_file", arguments })`
 5. Returns downstream response directly
 
-When `workbench_close_toolbox` is called:
-1. Calls `.remove()` on each registered tool
-2. Disconnects from downstream servers
-3. Sends `tool list changed` notification
+When server shuts down (SIGINT/SIGTERM):
+1. Calls `closeAllToolboxes()` to clean up all open toolboxes
+2. For each toolbox: calls `.remove()` on each registered tool
+3. Disconnects from all downstream servers
+4. Process exits cleanly within 5 seconds
 
 #### Proxy Mode
 When `workbench_open_toolbox` is called:
-1. Connects to all downstream MCP servers
-2. Queries `tools/list` from each server
-3. Returns full tool list with schemas and metadata (no registration)
-4. Tools are prefixed with server name in the returned list
+1. Checks if toolbox already open (idempotent - returns immediately if yes)
+2. Connects to all downstream MCP servers
+3. Queries `tools/list` from each server
+4. Returns full tool list with schemas and metadata (no registration)
+5. Tools are prefixed with server name in the returned list
+6. Toolbox remains open until server shutdown
 
 When `workbench_use_tool` is called:
 1. MCP client specifies `toolbox_name`, `tool_name` (prefixed), and `arguments`
@@ -339,8 +345,10 @@ When `workbench_use_tool` is called:
 3. Delegates to downstream server: `client.callTool({ name: original_name, arguments })`
 4. Returns downstream response directly
 
-When `workbench_close_toolbox` is called:
-1. Disconnects from downstream servers (no tools to unregister)
+When server shuts down (SIGINT/SIGTERM):
+1. Calls `closeAllToolboxes()` to clean up all open toolboxes
+2. Disconnects from all downstream servers
+3. Process exits cleanly within 5 seconds
 
 ### Error Handling Pattern
 - **Configuration errors**: Fail fast at startup with clear messages
@@ -410,6 +418,8 @@ If you need different behavior, modify the `generateToolName()` and `parseToolNa
 - In-memory state management (no persistent storage required) (001-duplicate-tools-support)
 - TypeScript 5.7.2, Node.js 18+ runtime + @modelcontextprotocol/sdk ^1.6.1, zod ^3.23.8 for validation (003-env-var-expansion)
 - N/A (configuration is file-based JSON, no persistent storage) (003-env-var-expansion)
+- TypeScript 5.7.2, Node.js 18+ + @modelcontextprotocol/sdk ^1.6.1, zod ^3.23.8 (004-remove-manual-close)
+- N/A (in-memory state management only) (004-remove-manual-close)
 
 ## Recent Changes
 - 001-duplicate-tools-support: Added TypeScript 5.7.2 with ES2022 target, Node.js 18+ runtime + @modelcontextprotocol/sdk ^1.6.1, zod ^3.23.8 for validation
