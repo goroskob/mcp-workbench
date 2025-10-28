@@ -11,11 +11,9 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { loadConfig } from "./config-loader.js";
 import { ClientManager } from "./client-manager.js";
-import { WorkbenchConfig, ToolboxSummary, OpenToolboxResult } from "./types.js";
+import { WorkbenchConfig, OpenToolboxResult } from "./types.js";
 
 // Zod schemas for tool inputs
-const ListToolboxesInputSchema = z.object({}).strict();
-
 const OpenToolboxInputSchema = z
   .object({
     toolbox_name: z
@@ -44,7 +42,6 @@ const UseToolInputSchema = z
   .strict();
 
 // Type inference
-type ListToolboxesInput = z.infer<typeof ListToolboxesInputSchema>;
 type OpenToolboxInput = z.infer<typeof OpenToolboxInputSchema>;
 type UseToolInput = z.infer<typeof UseToolInputSchema>;
 
@@ -70,6 +67,7 @@ class WorkbenchServer {
             listChanged: true,
           },
         },
+        instructions: this.generateToolboxInstructions(),
       }
     );
 
@@ -77,147 +75,46 @@ class WorkbenchServer {
   }
 
   /**
+   * Generate initialization instructions listing available toolboxes
+   * @returns Plain text instructions with toolbox metadata
+   */
+  private generateToolboxInstructions(): string {
+    const toolboxEntries = Object.entries(this.config.toolboxes);
+
+    // Handle empty configuration
+    if (toolboxEntries.length === 0) {
+      return [
+        "No toolboxes configured.",
+        "",
+        "To configure toolboxes, add them to your workbench-config.json file.",
+        "See documentation for configuration format.",
+      ].join("\n");
+    }
+
+    // Generate toolbox listings
+    const listings = toolboxEntries
+      .map(([name, config]) => {
+        const serverCount = Object.keys(config.mcpServers).length;
+        const description = config.description || "No description provided";
+        return `${name} (${serverCount} servers)\n  Description: ${description}`;
+      })
+      .join("\n\n");
+
+    // Combine header, listings, and footer
+    return [
+      "Available Toolboxes:",
+      "",
+      listings,
+      "",
+      "To access tools from a toolbox, use workbench_open_toolbox with the toolbox name.",
+    ].join("\n");
+  }
+
+  /**
    * Register all workbench tools
    */
   private registerTools(): void {
-    // Tool 1: List available toolboxes
-    const listToolboxesDescription = this.config.toolMode === 'proxy'
-      ? `List all available toolboxes configured in the workbench.
-
-A toolbox is a named collection of MCP tools organized by purpose or domain.
-Each toolbox can contain tools from one or more MCP servers.
-
-This tool returns:
-- List of toolbox names with descriptions
-- Tool count for each toolbox
-- Whether each toolbox is currently open
-
-Use this tool to discover what toolboxes are available before opening one.
-
-Workflow with proxy mode:
-1. Use this tool to list available toolboxes
-2. Use workbench_open_toolbox to open the desired toolbox
-3. Use workbench_use_tool to execute tools from the opened toolbox
-
-Returns:
-  JSON format:
-  {
-    "toolboxes": [
-      {
-        "name": string,           // Toolbox identifier
-        "description": string,    // What this toolbox is for
-        "tool_count": number,     // Number of tools available
-        "is_open": boolean        // Whether currently connected
-      }
-    ]
-  }
-
-Examples:
-  - Use when: You want to see what toolboxes are available
-  - Use when: You need to find the right toolbox for a task
-  - Use when: You want to check if a toolbox is already open`
-      : `List all available toolboxes configured in the workbench.
-
-A toolbox is a named collection of MCP tools organized by purpose or domain.
-Each toolbox can contain tools from one or more MCP servers.
-
-This tool returns:
-- List of toolbox names with descriptions
-- Tool count for each toolbox
-- Whether each toolbox is currently open
-
-Use this tool to discover what toolboxes are available before opening one.
-
-Workflow with dynamic tool registration:
-1. Use this tool to list available toolboxes
-2. Use workbench_open_toolbox to open the desired toolbox
-3. Call dynamically registered tools directly by their prefixed names (e.g., filesystem_read_file)
-
-Returns:
-  JSON format:
-  {
-    "toolboxes": [
-      {
-        "name": string,           // Toolbox identifier
-        "description": string,    // What this toolbox is for
-        "tool_count": number,     // Number of tools available
-        "is_open": boolean        // Whether currently connected
-      }
-    ]
-  }
-
-Examples:
-  - Use when: You want to see what toolboxes are available
-  - Use when: You need to find the right toolbox for a task
-  - Use when: You want to check if a toolbox is already open`;
-
-    this.server.registerTool(
-      "workbench_list_toolboxes",
-      {
-        title: "List Available Toolboxes",
-        description: listToolboxesDescription,
-        inputSchema: ListToolboxesInputSchema.shape,
-        annotations: {
-          readOnlyHint: true,
-          destructiveHint: false,
-          idempotentHint: true,
-          openWorldHint: false,
-        },
-      },
-      async (args: { [x: string]: any }) => {
-        const params = args as ListToolboxesInput;
-        try {
-          const toolboxes: ToolboxSummary[] = [];
-
-          for (const [name, config] of Object.entries(this.config.toolboxes)) {
-            // Calculate tool count estimate (without connecting)
-            const serverConfigs = Object.values(config.mcpServers);
-            const toolCount = serverConfigs.reduce((sum, server) => {
-              if (server.toolFilters && !server.toolFilters.includes("*")) {
-                return sum + server.toolFilters.length;
-              }
-              return sum + 10; // Estimate for "*" filter
-            }, 0);
-
-            toolboxes.push({
-              name,
-              description: config.description,
-              tool_count: toolCount,
-              is_open: this.clientManager.isToolboxOpen(name),
-            });
-          }
-
-          const result = {
-            toolboxes,
-            total_count: toolboxes.length,
-            open_count: toolboxes.filter((t) => t.is_open).length,
-          };
-
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: JSON.stringify(result, null, 2),
-              },
-            ],
-          };
-        } catch (error) {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: `Error listing toolboxes: ${
-                  error instanceof Error ? error.message : String(error)
-                }`,
-              },
-            ],
-            isError: true,
-          };
-        }
-      }
-    );
-
-    // Tool 2: Open a toolbox
+    // Tool 1: Open a toolbox
     // Description varies based on tool mode (proxy vs dynamic)
     const openToolboxDescription = this.config.toolMode === 'proxy'
       ? `Open a toolbox and discover its available tools.
@@ -238,7 +135,7 @@ Use workbench_use_tool to execute tools by their server-prefixed names.
 If the toolbox is already open, returns the cached information.
 
 Args:
-  - toolbox_name: Name of the toolbox to open (from workbench_list_toolboxes)
+  - toolbox_name: Name of the toolbox to open (from initialization instructions)
 
 Returns:
   JSON format:
@@ -261,7 +158,7 @@ Returns:
 Examples:
   - Use when: You need to access tools from a specific domain
   - Use when: Starting work on a new task requiring specific toolsets
-  - After: Using workbench_list_toolboxes to find the right toolbox
+  - After: Reading initialization instructions to find the right toolbox
   - Next: Use workbench_use_tool to execute discovered tools
 
 Error Handling:
@@ -287,7 +184,7 @@ a tool named "read_file" from server "filesystem" becomes "filesystem_read_file"
 If the toolbox is already open, returns the cached information.
 
 Args:
-  - toolbox_name: Name of the toolbox to open (from workbench_list_toolboxes)
+  - toolbox_name: Name of the toolbox to open (from initialization instructions)
 
 Returns:
   JSON format:
@@ -302,7 +199,7 @@ Returns:
 Examples:
   - Use when: You need to access tools from a specific domain
   - Use when: Starting work on a new task requiring specific toolsets
-  - After: Using workbench_list_toolboxes to find the right toolbox
+  - After: Reading initialization instructions to find the right toolbox
 
 Error Handling:
   - Returns error if toolbox name doesn't exist
@@ -380,7 +277,7 @@ Error Handling:
       }
     );
 
-    // Tool 3: Use a tool (proxy mode) - only if toolMode is 'proxy'
+    // Tool 2: Use a tool (proxy mode) - only if toolMode is 'proxy'
     if (this.config.toolMode === 'proxy') {
       this.server.registerTool(
         "workbench_use_tool",

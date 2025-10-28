@@ -444,30 +444,27 @@ Add to your configuration file:
 
 ### Available Tools
 
-The workbench provides 2-3 meta-tools depending on the configured `toolMode`:
+The workbench provides 1-2 meta-tools depending on the configured `toolMode`:
 
-#### 1. `workbench_list_toolboxes`
+#### Toolbox Discovery via Initialization
 
-List all available toolboxes and their status.
+When an MCP client connects to the workbench, the initialization response includes an `instructions` field with a listing of all configured toolboxes:
 
-```typescript
-// Input: (no parameters)
-// Output:
-{
-  "toolboxes": [
-    {
-      "name": "incident-analysis",
-      "description": "Tools for analyzing incidents",
-      "tool_count": 15,
-      "is_open": false
-    }
-  ],
-  "total_count": 3,
-  "open_count": 0
-}
+```
+Available Toolboxes:
+
+incident-analysis (2 servers)
+  Description: Tools for analyzing incidents
+
+data-processing (3 servers)
+  Description: Tools for data transformation
+
+To access tools from a toolbox, use workbench_open_toolbox with the toolbox name.
 ```
 
-#### 2. `workbench_open_toolbox`
+This allows clients to discover available toolboxes without making additional tool calls.
+
+#### 1. `workbench_open_toolbox`
 
 Open a toolbox and discover its tools.
 
@@ -517,7 +514,7 @@ Open a toolbox and discover its tools.
 // directly in your MCP client's tool list
 ```
 
-#### 3. `workbench_use_tool` _(Proxy Mode Only)_
+#### 2. `workbench_use_tool` _(Proxy Mode Only)_
 
 Execute a tool from an opened toolbox. Only available when `toolMode: "proxy"`.
 
@@ -539,8 +536,8 @@ Execute a tool from an opened toolbox. Only available when `toolMode: "proxy"`.
 ### Proxy Mode Workflow
 
 ```typescript
-// 1. List available toolboxes
-workbench_list_toolboxes()
+// 1. Read initialization instructions to see available toolboxes
+// (automatically provided during MCP initialization)
 
 // 2. Open the toolbox you need
 workbench_open_toolbox({ toolbox_name: "data-analysis" })
@@ -559,8 +556,8 @@ workbench_use_tool({
 ### Dynamic Mode Workflow
 
 ```typescript
-// 1. List available toolboxes
-workbench_list_toolboxes()
+// 1. Read initialization instructions to see available toolboxes
+// (automatically provided during MCP initialization)
 
 // 2. Open the toolbox you need
 workbench_open_toolbox({ toolbox_name: "data-analysis" })

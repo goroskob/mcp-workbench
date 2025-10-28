@@ -165,17 +165,21 @@ When a toolbox is opened, tool information is returned but tools are **not dynam
 
 ### The Workbench Meta-Tools
 
-The workbench exposes 2-3 meta-tools depending on the configured `toolMode`:
+The workbench exposes 1-2 meta-tools depending on the configured `toolMode`:
+
+**Toolbox Discovery:**
+- Toolbox listing is provided via the `instructions` field in the MCP initialization response
+- Shows all configured toolboxes with names, descriptions, and server counts
+- Available immediately on connection without additional tool calls
 
 **Always Available (Both Modes):**
-1. **workbench_list_toolboxes** - Lists configured toolboxes (read-only, no connections made)
-2. **workbench_open_toolbox** - Connects to all MCP servers in a toolbox (idempotent - safe to call multiple times)
+1. **workbench_open_toolbox** - Connects to all MCP servers in a toolbox (idempotent - safe to call multiple times)
    - **Dynamic mode**: Registers tools with prefixed names, sends tool list changed notification, returns tools_registered count
    - **Proxy mode**: Returns full tool list with schemas for use with `workbench_use_tool`
    - Toolboxes remain open until server shutdown with automatic cleanup
 
 **Proxy Mode Only:**
-3. **workbench_use_tool** - Executes a tool from an opened toolbox by delegating to the downstream server (only registered when `toolMode: "proxy"`)
+2. **workbench_use_tool** - Executes a tool from an opened toolbox by delegating to the downstream server (only registered when `toolMode: "proxy"`)
 
 ### Tool Naming Convention
 
@@ -297,6 +301,28 @@ Becomes (after expansion):
 ```
 
 ## Key Design Patterns
+
+### Initialization Instructions Pattern
+Toolbox discovery is integrated into the MCP initialization handshake via the `instructions` field:
+
+**On Server Construction**:
+1. `generateToolboxInstructions()` method creates plain text listing
+2. Reads toolbox names, descriptions, and server counts from configuration
+3. Handles empty configuration gracefully with helpful message
+4. Instructions passed to McpServer constructor via `ServerOptions.instructions`
+5. SDK automatically includes instructions in initialization response
+
+**Format**:
+- Plain text with structured sections
+- Lists toolbox name, server count, description
+- Includes usage guidance for `workbench_open_toolbox`
+- No dynamic updates (clients must reconnect to see config changes)
+
+**Benefits**:
+- Eliminates extra round-trip for toolbox discovery
+- Follows standard MCP initialization pattern
+- Available immediately on connection
+- No additional tool calls needed
 
 ### Lazy Connection Management
 Connections are **not** created at server startup. They're created when `workbench_open_toolbox` is called, allowing:

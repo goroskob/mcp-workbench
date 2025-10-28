@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Initialize Request",
+  "description": "Standard MCP initialization request from client to workbench server (unchanged by this feature)",
+  "type": "object",
+  "required": ["jsonrpc", "id", "method", "params"],
+  "properties": {
+    "jsonrpc": {
+      "type": "string",
+      "const": "2.0",
+      "description": "JSON-RPC version"
+    },
+    "id": {
+      "oneOf": [
+        {"type": "string"},
+        {"type": "number"}
+      ],
+      "description": "Request identifier"
+    },
+    "method": {
+      "type": "string",
+      "const": "initialize",
+      "description": "Must be 'initialize' for initialization requests"
+    },
+    "params": {
+      "type": "object",
+      "required": ["protocolVersion", "capabilities", "clientInfo"],
+      "properties": {
+        "protocolVersion": {
+          "type": "string",
+          "description": "MCP protocol version supported by client (e.g., '2024-11-05')",
+          "example": "2024-11-05"
+        },
+        "capabilities": {
+          "type": "object",
+          "description": "Client capabilities",
+          "properties": {
+            "roots": {
+              "type": "object",
+              "description": "Filesystem roots capability"
+            },
+            "sampling": {
+              "type": "object",
+              "description": "LLM sampling capability"
+            },
+            "experimental": {
+              "type": "object",
+              "description": "Experimental features"
+            }
+          }
+        },
+        "clientInfo": {
+          "type": "object",
+          "required": ["name", "version"],
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Client implementation name",
+              "example": "claude-desktop"
+            },
+            "version": {
+              "type": "string",
+              "description": "Client version",
+              "example": "1.0.0"
+            }
+          }
+        }
+      }
+    }
+  },
+  "example": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {
+        "roots": {
+          "listChanged": true
+        }
+      },
+      "clientInfo": {
+        "name": "claude-desktop",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
