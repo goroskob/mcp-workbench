@@ -13,8 +13,8 @@ Instead of managing connections to multiple MCP servers manually, MCP Workbench 
 
 ### Two Invocation Modes
 
-- **Dynamic Mode (default)**: Tools are automatically registered on the workbench server and appear natively in your MCP client's tool list with prefixed names (e.g., `main__clickhouse__list_databases` where `main` is the toolbox name)
-- **Proxy Mode**: Tools are accessed via the `workbench_use_tool` meta-tool, designed for MCP clients that don't support dynamic tool registration
+- **Proxy-Only Mode (default)**: Tools are automatically registered on the workbench server and appear natively in your MCP client's tool list with prefixed names (e.g., `main__clickhouse__list_databases` where `main` is the toolbox name)
+- **Proxy-Only Mode**: Tools are accessed via the `use_tool` meta-tool, designed for MCP clients that don't support dynamic tool registration
 
 ### Tool Naming Convention
 
@@ -53,11 +53,11 @@ The separator between server name and tool name changed from single underscore (
 
 **Before (v0.4.0):**
 ```javascript
-// Direct tool call (dynamic mode)
+// Direct tool call (proxy-only mode)
 client.callTool({ name: "dev__filesystem_read_file", arguments: {...} })
 
 // Proxy mode
-workbench_use_tool({
+use_tool({
   toolbox_name: "dev",
   tool_name: "dev__filesystem_read_file",
   arguments: {...}
@@ -66,11 +66,11 @@ workbench_use_tool({
 
 **After (v0.5.0):**
 ```javascript
-// Direct tool call (dynamic mode)
+// Direct tool call (proxy-only mode)
 client.callTool({ name: "dev__filesystem__read_file", arguments: {...} })
 
 // Proxy mode
-workbench_use_tool({
+use_tool({
   toolbox_name: "dev",
   tool_name: "dev__filesystem__read_file",
   arguments: {...}
@@ -188,7 +188,7 @@ Create a `workbench-config.json` file:
 
 - **toolMode**: Tool invocation mode - `"dynamic"` (default) or `"proxy"` (optional, top-level)
   - **dynamic**: Tools are automatically registered with prefixed names (e.g., `main__clickhouse__list_databases`)
-  - **proxy**: Tools are accessed via `workbench_use_tool` meta-tool
+  - **proxy**: Tools are accessed via `use_tool` meta-tool
 - **toolboxes**: Object mapping toolbox names to configurations
   - **description**: Human-readable purpose of the toolbox
   - **mcpServers**: Object mapping server names to MCP server configurations (uses standard MCP schema)
@@ -459,16 +459,16 @@ incident-analysis (2 servers)
 data-processing (3 servers)
   Description: Tools for data transformation
 
-To access tools from a toolbox, use workbench_open_toolbox with the toolbox name.
+To access tools from a toolbox, use open_toolbox with the toolbox name.
 ```
 
 This allows clients to discover available toolboxes without making additional tool calls.
 
-#### 1. `workbench_open_toolbox`
+#### 1. `open_toolbox`
 
 Open a toolbox and discover its tools.
 
-**In Proxy Mode:**
+**In Proxy-Only Mode:**
 ```typescript
 // Input:
 {
@@ -494,7 +494,7 @@ Open a toolbox and discover its tools.
 }
 ```
 
-**In Dynamic Mode:**
+**In Proxy-Only Mode:**
 ```typescript
 // Input:
 {
@@ -514,7 +514,7 @@ Open a toolbox and discover its tools.
 // directly in your MCP client's tool list
 ```
 
-#### 2. `workbench_use_tool` _(Proxy Mode Only)_
+#### 2. `use_tool` _(Proxy-Only Mode Only)_
 
 Execute a tool from an opened toolbox. Only available when `toolMode: "proxy"`.
 
@@ -533,17 +533,17 @@ Execute a tool from an opened toolbox. Only available when `toolMode: "proxy"`.
 
 ## Workflow Examples
 
-### Proxy Mode Workflow
+### Proxy-Only Mode Workflow
 
 ```typescript
 // 1. Read initialization instructions to see available toolboxes
 // (automatically provided during MCP initialization)
 
 // 2. Open the toolbox you need
-workbench_open_toolbox({ toolbox_name: "data-analysis" })
+open_toolbox({ toolbox_name: "data-analysis" })
 
-// 3. Use tools from the toolbox via workbench_use_tool
-workbench_use_tool({
+// 3. Use tools from the toolbox via use_tool
+use_tool({
   toolbox_name: "data-analysis",
   tool_name: "data-analysis__postgres__query_database",  // Toolbox and server prefixed
   arguments: { query: "SELECT * FROM users LIMIT 10" }
@@ -553,14 +553,14 @@ workbench_use_tool({
 // All connections are automatically cleaned up when the server terminates
 ```
 
-### Dynamic Mode Workflow
+### Proxy-Only Mode Workflow
 
 ```typescript
 // 1. Read initialization instructions to see available toolboxes
 // (automatically provided during MCP initialization)
 
 // 2. Open the toolbox you need
-workbench_open_toolbox({ toolbox_name: "data-analysis" })
+open_toolbox({ toolbox_name: "data-analysis" })
 // This registers tools like 'data-analysis__postgres__query_database' in your MCP client
 
 // 3. Call tools directly by their registered names
@@ -640,7 +640,7 @@ Organize tools by environment:
 │  │  - open_toolbox              │   │
 │  │  - use_tool (proxy mode)     │   │
 │  │                              │   │
-│  │  Dynamic Mode:               │   │
+│  │  Proxy-Only Mode:               │   │
 │  │  + Registered downstream     │   │
 │  │    tools (toolbox__server__toolname) │
 │  └──────────────────────────────┘   │
@@ -702,14 +702,14 @@ Example: main__filesystem__read_file
 1. **MCP Client Tool Invocations**: Update all tool calls to include the toolbox prefix
    ```typescript
    // Old (v0.3.x)
-   workbench_use_tool({
+   use_tool({
      toolbox_name: "mytools",
      tool_name: "filesystem_read_file",  // ❌ Old format
      arguments: { path: "test.txt" }
    })
 
    // New (v0.4.0+)
-   workbench_use_tool({
+   use_tool({
      toolbox_name: "mytools",
      tool_name: "mytools__filesystem__read_file",  // ✅ New format
      arguments: { path: "test.txt" }
@@ -718,7 +718,7 @@ Example: main__filesystem__read_file
 
 2. **Configuration Files**: No changes required! Your `workbench-config.json` format remains the same.
 
-3. **Dynamic Mode**: Tools in your MCP client's tool list will now show with toolbox prefix
+3. **Proxy-Only Mode**: Tools in your MCP client's tool list will now show with toolbox prefix
    ```
    Before: filesystem_read_file, memory_store
    After:  main__filesystem__read_file, main__memory__store
@@ -776,7 +776,7 @@ Both can be used simultaneously without conflicts!
 
 ### "Tool not found in toolbox"
 
-- Verify the toolbox is opened with `workbench_open_toolbox`
+- Verify the toolbox is opened with `open_toolbox`
 - Check the tool name from the open toolbox response
 - Ensure `toolFilters` includes the tool (or use `["*"]`)
 

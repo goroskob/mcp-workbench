@@ -7,6 +7,122 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2025-10-28
+
+### BREAKING CHANGES
+
+**Dynamic mode has been removed** - The workbench now operates exclusively in proxy mode. All tool invocation must flow through the `use_tool` meta-tool.
+
+**Meta-tools renamed** - The `workbench_` prefix has been dropped from all meta-tools for cleaner API naming:
+- `workbench_open_toolbox` → `open_toolbox`
+- `workbench_use_tool` → `use_tool`
+
+### Removed
+
+- **BREAKING**: Removed dynamic mode support
+  - Tools are no longer dynamically registered on the workbench server
+  - `tool list changed` notifications no longer sent
+  - All tool invocation now requires explicit `use_tool` calls
+- **BREAKING**: Removed `toolMode` configuration field (proxy mode is now implicit)
+  - Configurations with `"toolMode": "dynamic"` will fail with clear error message
+  - Configurations with `"toolMode": "proxy"` still work but will show deprecation warning
+- Internal: Removed `registerToolsOnServer()` and `unregisterToolsFromServer()` methods
+- Internal: Removed `registeredTools` field from `OpenedToolbox` type
+- Internal: Removed `RegisteredToolInfo` type
+
+### Changed
+
+- **BREAKING**: Meta-tool names simplified (dropped `workbench_` prefix)
+  - `workbench_open_toolbox` → `open_toolbox`
+  - `workbench_use_tool` → `use_tool`
+- **BREAKING**: Tool invocation now requires `use_tool` for all operations
+- `open_toolbox` now always returns full tool list with schemas (previously mode-dependent)
+- Configuration validation now explicitly rejects `toolMode: "dynamic"` with migration guidance
+- Initialization instructions updated to mention both `open_toolbox` and `use_tool`
+- Code simplified: ~300 LOC removed, ~50 LOC updated
+
+### Migration Guide
+
+**For MCP Client Users:**
+
+1. **Update tool names in all tool calls:**
+   ```diff
+   - Call workbench_open_toolbox with toolbox name
+   + Call open_toolbox with toolbox name
+
+   - Call workbench_use_tool with toolbox, tool name, and arguments
+   + Call use_tool with toolbox, tool name, and arguments
+   ```
+
+2. **Update configuration files:**
+   ```diff
+   {
+   -  "toolMode": "dynamic",
+      "toolboxes": { ... }
+   }
+   ```
+   Remove the `toolMode` field entirely or change to `"proxy"` (field is now deprecated but harmless).
+
+3. **Update tool invocation patterns (if using dynamic mode):**
+
+   **Before (dynamic mode):**
+   ```typescript
+   // Tools were called directly
+   await client.callTool({ name: "dev__filesystem__read_file", arguments: { path: "test.txt" } })
+   ```
+
+   **After (proxy-only mode):**
+   ```typescript
+   // All tools invoked via use_tool
+   await client.callTool({
+     name: "use_tool",
+     arguments: {
+       toolbox_name: "dev",
+       tool_name: "dev__filesystem__read_file",
+       arguments: { path: "test.txt" }
+     }
+   })
+   ```
+
+4. **Update response parsing for `open_toolbox`:**
+
+   The response now always includes full tool list (previously this was mode-dependent):
+   ```typescript
+   {
+     toolbox: "dev",
+     description: "Development toolbox",
+     servers_connected: 2,
+     tools: [  // Full array with schemas (not just a count)
+       {
+         name: "dev__filesystem__read_file",
+         source_server: "filesystem",
+         description: "...",
+         inputSchema: { ... }
+       }
+     ]
+   }
+   ```
+
+**For Developers:**
+
+- Type changes: `WorkbenchConfig` no longer has `toolMode` field
+- Type changes: `OpenedToolbox` no longer has `registeredTools` field
+- Type changes: `OpenToolboxResult` always returns `tools: ToolInfo[]` array
+- Architecture: Proxy-only operation, no dynamic registration code paths
+
+### Benefits
+
+- **Simplified architecture**: Single invocation mode eliminates conditional code paths
+- **Reduced complexity**: ~300 lines of code removed (dynamic registration logic)
+- **Clearer separation**: Meta-tools vs. downstream tools distinction is unambiguous
+- **Consistent behavior**: No mode-specific edge cases or behavior differences
+- **Easier testing**: Single code path to test and validate
+
+### References
+
+- Migration guide: [specs/006-remove-dynamic-mode/quickstart.md](specs/006-remove-dynamic-mode/quickstart.md)
+- Feature specification: [specs/006-remove-dynamic-mode/spec.md](specs/006-remove-dynamic-mode/spec.md)
+
 ## [0.9.0] - 2025-10-28
 
 ### Removed

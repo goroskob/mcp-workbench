@@ -106,7 +106,7 @@ class WorkbenchServer {
       "",
       listings,
       "",
-      "To access tools from a toolbox, use workbench_open_toolbox with the toolbox name.",
+      "Use open_toolbox to connect to a toolbox, then use_tool to invoke tools.",
     ].join("\n");
   }
 
@@ -115,13 +115,11 @@ class WorkbenchServer {
    */
   private registerTools(): void {
     // Tool 1: Open a toolbox
-    // Description varies based on tool mode (proxy vs dynamic)
-    const openToolboxDescription = this.config.toolMode === 'proxy'
-      ? `Open a toolbox and discover its available tools.
+    const openToolboxDescription = `Open a toolbox and discover its available tools.
 
 This tool connects to all MCP servers configured in the specified toolbox
 and retrieves their tool definitions. Once opened, you can use the tools
-via workbench_use_tool.
+via use_tool.
 
 Opening a toolbox:
 1. Connects to each MCP server in the toolbox
@@ -130,9 +128,9 @@ Opening a toolbox:
 4. Returns complete tool list with full schemas
 
 The tool list includes complete schemas and metadata for each tool.
-Use workbench_use_tool to execute tools by their server-prefixed names.
+Use use_tool to execute tools by their server-prefixed names.
 
-If the toolbox is already open, returns the cached information.
+If the toolbox is already open, returns the cached information (idempotent operation).
 
 Args:
   - toolbox_name: Name of the toolbox to open (from initialization instructions)
@@ -159,47 +157,7 @@ Examples:
   - Use when: You need to access tools from a specific domain
   - Use when: Starting work on a new task requiring specific toolsets
   - After: Reading initialization instructions to find the right toolbox
-  - Next: Use workbench_use_tool to execute discovered tools
-
-Error Handling:
-  - Returns error if toolbox name doesn't exist
-  - Returns error if MCP servers fail to connect
-  - Provides connection details in error messages`
-      : `Open a toolbox and register its tools on the workbench server.
-
-This tool connects to all MCP servers configured in the specified toolbox,
-retrieves their tools, and dynamically registers them on the workbench server.
-Once opened, tools can be called directly by their prefixed names.
-
-Opening a toolbox:
-1. Connects to each MCP server in the toolbox
-2. Retrieves the list of available tools from each server
-3. Applies any tool filters specified in the configuration
-4. Dynamically registers tools with prefix: {server}_{tool_name}
-5. Sends tool list changed notification to clients
-
-Tools are prefixed with their server name to avoid conflicts. For example,
-a tool named "read_file" from server "filesystem" becomes "filesystem_read_file".
-
-If the toolbox is already open, returns the cached information.
-
-Args:
-  - toolbox_name: Name of the toolbox to open (from initialization instructions)
-
-Returns:
-  JSON format:
-  {
-    "toolbox": string,              // Toolbox name
-    "description": string,          // Purpose description
-    "servers_connected": number,    // Number of MCP servers connected
-    "tools_registered": number,     // Number of tools registered
-    "message": string               // Success message
-  }
-
-Examples:
-  - Use when: You need to access tools from a specific domain
-  - Use when: Starting work on a new task requiring specific toolsets
-  - After: Reading initialization instructions to find the right toolbox
+  - Next: Use use_tool to execute discovered tools
 
 Error Handling:
   - Returns error if toolbox name doesn't exist
@@ -207,7 +165,7 @@ Error Handling:
   - Provides connection details in error messages`;
 
     this.server.registerTool(
-      "workbench_open_toolbox",
+      "open_toolbox",
       {
         title: "Open a Toolbox",
         description: openToolboxDescription,
@@ -236,15 +194,11 @@ Error Handling:
             };
           }
 
-          // Open the toolbox (connects to servers and registers tools)
+          // Open the toolbox (connects to servers and returns tool list)
           const { connections, tools } = await this.clientManager.openToolbox(
             params.toolbox_name,
-            toolboxConfig,
-            this.server
+            toolboxConfig
           );
-
-          // Notify clients that tool list has changed
-          this.server.sendToolListChanged();
 
           const result: OpenToolboxResult = {
             toolbox: params.toolbox_name,
@@ -277,18 +231,12 @@ Error Handling:
       }
     );
 
-    // Tool 2: Use a tool (proxy mode) - only if toolMode is 'proxy'
-    if (this.config.toolMode === 'proxy') {
-      this.server.registerTool(
-        "workbench_use_tool",
-        {
-          title: "Use a Tool from Toolbox",
-          description: `Execute a tool from an opened toolbox (proxy mode).
-
-This tool is available when toolMode is set to 'proxy' in the configuration.
-It provides an alternative invocation method for MCP clients that don't support
-dynamic tool registration. When using dynamic mode, tools are registered directly
-with prefixed names (e.g., 'filesystem_read_file').
+    // Tool 2: Use a tool (proxy mode)
+    this.server.registerTool(
+      "use_tool",
+      {
+        title: "Use a Tool from Toolbox",
+        description: `Execute a tool from an opened toolbox by delegating to the appropriate downstream MCP server.
 
 How it works:
 1. Specify the toolbox name and tool name
@@ -298,16 +246,16 @@ How it works:
 
 Args:
   - toolbox_name: Name of an opened toolbox
-  - tool_name: Server-prefixed tool name (e.g., 'clickhouse-wsw1_run_select_query') as shown in workbench_open_toolbox response
+  - tool_name: Server-prefixed tool name (e.g., 'clickhouse-wsw1_run_select_query') as shown in open_toolbox response
   - arguments: Tool arguments as a JSON object (optional)
 
 Returns:
   Proxied response from the underlying tool
 
 Examples:
-  - Use when: Your MCP client doesn't support dynamic tool registration
+  - Use when: Invoking tools from an opened toolbox
   - Use when: You prefer explicit toolbox/tool naming
-  - After: Opening a toolbox with workbench_open_toolbox
+  - After: Opening a toolbox with open_toolbox
 
 Error Handling:
   - Returns error if toolbox is not open
@@ -352,7 +300,6 @@ Error Handling:
           }
         }
       );
-    }
   }
 
   /**

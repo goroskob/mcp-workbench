@@ -3,7 +3,6 @@
  */
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 /**
  * Standard MCP server configuration (matching Claude Desktop schema)
@@ -45,8 +44,7 @@ export interface ToolboxConfig {
 export interface WorkbenchConfig {
   /** Named toolboxes containing MCP server configurations */
   toolboxes: Record<string, ToolboxConfig>;
-  /** Tool invocation mode: 'dynamic' (default) = tools are dynamically registered, 'proxy' = tools accessed via workbench_use_tool */
-  toolMode?: 'dynamic' | 'proxy';
+  // toolMode field removed - proxy mode is now the only mode
 }
 
 /**
@@ -57,24 +55,6 @@ export interface ToolInfo extends Tool {
   source_server: string;
   /** Name of the toolbox this tool belongs to */
   toolbox_name: string;
-}
-
-/**
- * Information about a registered tool
- */
-export interface RegisteredToolInfo {
-  /** Prefixed tool name (e.g., "dev__filesystem_read_file") */
-  name: string;
-  /** Original tool name from downstream server (e.g., "read_file") */
-  original_name: string;
-  /** Source server name (e.g., "filesystem") */
-  server: string;
-  /** Toolbox name (e.g., "dev") */
-  toolbox_name: string;
-  /** Tool description */
-  description?: string;
-  /** Tool title */
-  title?: string;
 }
 
 /**
@@ -111,7 +91,6 @@ export interface OpenedToolbox {
   name: string;
   config: ToolboxConfig;
   connections: Map<string, ServerConnection>;
-  /** Registered tools on the workbench server for this toolbox */
-  registeredTools: Map<string, RegisteredTool>;
+  // registeredTools field removed - no dynamic registration in proxy-only mode
   opened_at: Date;
 }

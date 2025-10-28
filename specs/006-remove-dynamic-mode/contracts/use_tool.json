@@ -1,0 +1,70 @@
+{
+  "name": "use_tool",
+  "description": "Execute a tool from an opened toolbox by delegating to the appropriate downstream MCP server. Tool name must be server-prefixed as shown in open_toolbox response.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "toolbox_name": {
+        "type": "string",
+        "description": "Name of the opened toolbox containing the tool"
+      },
+      "tool_name": {
+        "type": "string",
+        "description": "Server-prefixed tool name from open_toolbox response (format: {server}__{tool})"
+      },
+      "arguments": {
+        "type": "object",
+        "description": "Arguments to pass to the downstream tool (schema defined in tool's inputSchema)",
+        "additionalProperties": true
+      }
+    },
+    "required": ["toolbox_name", "tool_name"]
+  },
+  "outputSchema": {
+    "description": "Returns the result from the downstream tool execution. Format depends on the specific tool invoked.",
+    "oneOf": [
+      {
+        "type": "object",
+        "description": "Successful tool execution result",
+        "properties": {
+          "content": {
+            "type": "array",
+            "description": "Tool output content (format varies by tool)"
+          },
+          "isError": {
+            "type": "boolean",
+            "const": false
+          }
+        }
+      },
+      {
+        "type": "object",
+        "description": "Failed tool execution",
+        "properties": {
+          "content": {
+            "type": "array",
+            "description": "Error details"
+          },
+          "isError": {
+            "type": "boolean",
+            "const": true
+          }
+        }
+      }
+    ]
+  },
+  "errors": {
+    "TOOLBOX_NOT_FOUND": {
+      "description": "Specified toolbox has not been opened via open_toolbox",
+      "example": "Toolbox 'prod' not found. Use open_toolbox first."
+    },
+    "TOOL_NOT_FOUND": {
+      "description": "Specified tool does not exist in the opened toolbox",
+      "example": "Tool 'filesystem__invalid_tool' not found in toolbox 'main'"
+    },
+    "DELEGATION_ERROR": {
+      "description": "Error occurred during delegation to downstream server",
+      "example": "Error calling downstream tool filesystem__read_file: Permission denied"
+    }
+  }
+}

@@ -30,9 +30,24 @@ export async function loadConfig(configPath: string): Promise<WorkbenchConfig> {
       throw new Error("Configuration must have a 'toolboxes' object");
     }
 
-    // Validate toolMode if provided
-    if (config.toolMode !== undefined && config.toolMode !== 'dynamic' && config.toolMode !== 'proxy') {
-      throw new Error("Configuration field 'toolMode' must be either 'dynamic' or 'proxy'");
+    // Reject dynamic mode (removed in v0.10.0)
+    if ((config as any).toolMode === 'dynamic') {
+      throw new Error(
+        'Dynamic mode is no longer supported as of v0.10.0.\n' +
+        'Please remove the "toolMode" field from your configuration.\n' +
+        'The workbench now operates exclusively in proxy mode.\n' +
+        'See migration guide: https://github.com/hlibkoval/mcp-workbench/blob/main/specs/006-remove-dynamic-mode/quickstart.md'
+      );
+    }
+
+    // Warn about deprecated toolMode field
+    if ((config as any).toolMode === 'proxy') {
+      console.warn('Note: toolMode field is deprecated and will be ignored. Proxy mode is now the default.');
+    }
+
+    // Warn about any other unexpected toolMode value
+    if ((config as any).toolMode !== undefined && (config as any).toolMode !== 'proxy') {
+      console.warn(`Unknown toolMode value "${(config as any).toolMode}" will be ignored.`);
     }
 
     // Validate each toolbox
