@@ -1,5 +1,7 @@
 # MCP Workbench
 
+> **⚠️ INCUBATION STAGE**: This project is in active development (pre-1.0.0). Breaking changes may occur in any release. Not recommended for production use until 1.0.0. See [Versioning Policy](#versioning-policy) below.
+
 **MCP Workbench** is a meta-MCP server that aggregates tools from other MCP servers and organizes them into "toolboxes" for efficient discovery and invocation.
 
 ## Overview
@@ -598,6 +600,27 @@ npm run clean
 - Verify the toolbox is opened with `open_toolbox`
 - Check the tool name from the open toolbox response
 - Ensure `toolFilters` includes the tool (or use `["*"]`)
+
+## Versioning Policy
+
+This project uses **relaxed semantic versioning** while in incubation (versions < 1.0.0):
+
+- **Breaking changes may occur in any release** (major, minor, or patch)
+- **No migration guides provided** during incubation
+- **No backward compatibility guarantees** between releases
+- **Fast iteration prioritized** over stability
+
+**What this means for users:**
+- Pin to exact versions in your dependencies: `"mcp-workbench": "0.11.1"` (not `^0.11.1`)
+- Review release notes carefully before updating
+- Test thoroughly after updates
+- Expect API changes, configuration changes, and behavior changes
+
+**After 1.0.0:**
+- Strict semantic versioning will be followed
+- Breaking changes only in major versions
+- Migration guides provided for all breaking changes
+- Backward compatibility maintained within major version series
 
 ## License
 

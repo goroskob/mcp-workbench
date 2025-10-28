@@ -1,24 +1,20 @@
 <!--
 Sync Impact Report:
-Version: 1.7.0 (Structured tool naming)
+Version: 1.8.0 (Incubation stage policy)
 Modified Principles:
-  - II. Tool Naming and Conflict Resolution - Replaced string-based concatenation with structured objects { toolbox, server, tool }
-  - III. Proxy-Based Tool Invocation - Updated use_tool parameter format to accept structured tool identifiers
-Added Sections: N/A
+  - VI. Release Policy and Workflow - Added version bump guidelines section specifying relaxed semver during incubation
+Added Sections:
+  - VII. Incubation Stage Policy - New principle defining pre-1.0.0 incubation rules
 Removed Sections: N/A
 Templates Requiring Updates:
   ✅ plan-template.md - No changes needed (implementation-specific)
   ✅ spec-template.md - No changes needed (feature-specific changes)
   ✅ tasks-template.md - No changes needed (task structure unchanged)
-  ⏳ README.md - Needs update (structured naming examples)
-  ⏳ CLAUDE.md - Needs update (structured naming architecture)
-  ⏳ CHANGELOG.md - Needs update for v0.11.0 release with breaking changes
-Follow-up TODOs:
-  - Update README.md with structured naming examples
-  - Update CLAUDE.md architecture documentation for structured approach
-  - Update CHANGELOG.md with breaking change notice for v0.11.0
-  - Verify structured tool naming works correctly with MCP clients
+  ✅ README.md - Added incubation warning badge and Versioning Policy section
+  ✅ CLAUDE.md - Updated release workflow section with detailed incubation policy
+Follow-up TODOs: None - all updates completed
 Previous Versions:
+  - 1.7.0 (2025-10-28): Structured tool naming
   - 1.6.0 (2025-10-28): Remove dynamic mode, rename meta-tools
   - 1.5.0 (2025-10-27): Initialization instructions for toolbox discovery
   - 1.4.0 (2025-10-27): Simplified toolbox lifecycle - removed manual close operations
@@ -79,7 +75,7 @@ The workbench configuration file is the authoritative source of truth and MUST b
 
 - Configuration file path MUST be provided via `WORKBENCH_CONFIG` environment variable
 - Configuration MUST use standard MCP server schema for `mcpServers` entries (compatible with Claude Desktop/.claude.json)
-- Workbench-specific extensions (`toolFilters`, `transport`, `toolMode`) MUST be clearly documented
+- Workbench-specific extensions (`toolFilters`, `transport`) MUST be clearly documented
 - Invalid configurations MUST fail fast with clear error messages
 - Configuration errors MUST prevent server startup
 
@@ -128,21 +124,73 @@ When a version tag matching `v*` is pushed from `main`:
 4. GitHub Actions MUST upload distribution artifacts
 
 **Version Bump Guidelines:**
+
+**While in incubation (versions < 1.0.0):**
+- Semver is RELAXED: breaking changes are permitted at any time
+- No migration guides or backward compatibility considerations required during incubation
+- Version increments follow general guidance but are advisory:
+  - **MAJOR** (0.x.0 → 0.y.0): Significant architectural changes or major feature sets
+  - **MINOR** (0.x.y → 0.x.z): New features, enhancements, or minor breaking changes
+  - **PATCH** (0.x.y → 0.x.y+1): Bug fixes, documentation updates, small refinements
+- Breaking changes are normal and expected - iterate fast without legacy burden
+
+**After reaching 1.0.0 (graduation from incubation):**
 - **MAJOR**: Breaking changes to meta-tool schemas, configuration format, or tool naming convention
 - **MINOR**: New features, new configuration options, backward-compatible enhancements
 - **PATCH**: Bug fixes, documentation updates, internal refactoring, dependency updates
+- Migration guides MUST be provided for breaking changes
 
 **Release Validation Checklist:**
 Before pushing a release tag, verify:
 - [ ] All changes are merged to `main`
 - [ ] Version in `package.json` matches tag version
 - [ ] `CHANGELOG.md` contains entry for this version
-- [ ] Breaking changes are documented with migration guides
 - [ ] All documentation (README.md, CLAUDE.md) is up to date
 - [ ] CI/CD tests pass on `main` branch
 - [ ] Tag is created from latest `main` commit
 
-**Rationale**: The merge-first policy prevents divergence between published releases and the main branch, ensures all releases undergo code review, maintains clean git history, and prevents confusion about which code was actually released. This discipline is essential for maintaining trust in the published packages and enabling reliable rollbacks if needed.
+**Rationale**: The merge-first policy prevents divergence between published releases and the main branch, ensures all releases undergo code review, maintains clean git history, and prevents confusion about which code was actually released. This discipline is essential for maintaining trust in the published packages and enabling reliable rollbacks if needed. Relaxed semver during incubation enables rapid iteration without the burden of maintaining backward compatibility before core patterns stabilize.
+
+### VII. Incubation Stage Policy
+
+The project is in an incubation stage for all versions < 1.0.0, enabling rapid iteration and experimentation without backward compatibility constraints:
+
+**Incubation Status Rules:**
+- The project MUST remain in incubation until version 1.0.0 is explicitly released
+- The project MUST NOT graduate from incubation (reach 1.0.0) without explicit decision and announcement
+- Incubation status MUST be clearly communicated in all public documentation (README.md, package.json description)
+- Pre-1.0.0 releases MUST be tagged as incubating or experimental in public communications
+
+**During Incubation (versions < 1.0.0):**
+- Semantic versioning is RELAXED: breaking changes may occur in any release (major, minor, or patch)
+- Migration guides are NOT REQUIRED for breaking changes
+- Backward compatibility is NOT GUARANTEED between releases
+- Fast iteration takes precedence over stability
+- Users MUST expect API changes, configuration changes, and behavior changes
+- Deprecation warnings are OPTIONAL (but appreciated when practical)
+
+**Graduation Criteria (moving to 1.0.0):**
+Before graduating from incubation, the following MUST be stable and well-tested:
+- [ ] Core architecture patterns (meta-server, toolbox, proxy invocation)
+- [ ] Configuration schema and format
+- [ ] Meta-tool schemas and behavior
+- [ ] Tool naming and identification approach
+- [ ] Error handling patterns
+- [ ] Production usage validated by real-world deployments
+
+**Post-Incubation (versions ≥ 1.0.0):**
+- Strict semantic versioning MUST be followed
+- Breaking changes MUST only occur in major version bumps
+- Migration guides MUST be provided for all breaking changes
+- Deprecation warnings MUST precede breaking changes by at least one minor version
+- Backward compatibility MUST be maintained within major version series
+
+**Communication Requirements:**
+- README.md MUST include clear incubation status warning until 1.0.0
+- Release notes for pre-1.0.0 versions SHOULD highlight breaking changes but MAY omit migration paths
+- npm package description SHOULD include "incubating" or "pre-1.0" qualifier
+
+**Rationale**: Explicit incubation policy sets clear expectations for users and maintainers. Pre-1.0 versions signal the project is still finding its optimal design and breaking changes are normal. This enables exploring different approaches (like the structured tool naming migration) without being locked into suboptimal patterns. Graduation to 1.0.0 becomes a meaningful milestone signaling production-readiness and stability commitment. Fast iteration during incubation accelerates learning and improvement without legacy burden.
 
 ## Quality Standards
 
@@ -216,7 +264,8 @@ The following changes MUST trigger corresponding documentation updates before me
 - Feature branches MUST follow pattern: `NNN-brief-description` where NNN is the spec number (e.g., `001-duplicate-tools-support`)
 - Bug fix branches MUST follow pattern: `fix/issue-description`
 - Commit messages MUST follow conventional commits format (`feat:`, `fix:`, `docs:`, etc.)
-- Breaking changes MUST use `feat!:` or `fix!:` and include `BREAKING CHANGE:` in commit body
+- Breaking changes during incubation MAY use `feat!:` or `fix!:` but it is OPTIONAL
+- Breaking changes after 1.0.0 MUST use `feat!:` or `fix!:` and include `BREAKING CHANGE:` in commit body
 - Breaking changes MUST be clearly documented in commit messages and CHANGELOG.md
 
 ## Governance
@@ -250,4 +299,4 @@ When constitution is updated:
 5. Update CLAUDE.md if architectural principles change
 6. Update README.md if user-facing guidance changes
 
-**Version**: 1.7.0 | **Ratified**: 2025-10-24 | **Last Amended**: 2025-10-28
+**Version**: 1.8.0 | **Ratified**: 2025-10-24 | **Last Amended**: 2025-10-28

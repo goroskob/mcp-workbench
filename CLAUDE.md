@@ -35,7 +35,24 @@ This project uses automated GitHub Actions for releases and npm publishing.
 
 ### Versioning Policy
 
-**Pre-1.0.0 (Incubating)**: This project uses **relaxed semver** while in incubation (versions < 1.0.0). Breaking changes may be introduced in any release during this phase. Once the project reaches 1.0.0, it will follow strict semantic versioning.
+**Pre-1.0.0 (Incubation Stage)**: This project is in incubation and uses **relaxed semver** (versions < 1.0.0):
+
+- **Breaking changes permitted in any release** - major, minor, or patch versions
+- **No migration guides required** during incubation
+- **No backward compatibility guarantees** between releases
+- **Fast iteration prioritized** - exploring optimal designs without legacy burden
+- **Version increments are advisory**:
+  - 0.x.0 → 0.y.0: Significant architectural changes or major feature sets
+  - 0.x.y → 0.x.z: New features, enhancements, or minor breaking changes
+  - 0.x.y → 0.x.y+1: Bug fixes, documentation updates, small refinements
+
+**Post-1.0.0 (Production)**: Once graduated from incubation, strict semver will apply:
+- Breaking changes ONLY in major versions
+- Migration guides REQUIRED for all breaking changes
+- Backward compatibility MAINTAINED within major version series
+- Deprecation warnings REQUIRED before breaking changes
+
+The project will NOT graduate to 1.0.0 until core patterns are stable and validated by production usage.
 
 ### Creating a New Release
 
