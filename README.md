@@ -597,18 +597,19 @@ npm run test:e2e:watch
 ```
 
 **What's Tested:**
-- Complete workflow validation (initialization → open toolbox → execute tools → cleanup)
-- Server startup and MCP client connection
-- Toolbox opening and tool discovery
-- Tool execution via `use_tool` meta-tool
-- Proper connection cleanup and resource management
+- **Workflow Validation (US1)**: Complete workflow from initialization → open toolbox → execute tools → cleanup
+- **Configuration Validation (US2)**: Environment variables, tool filters, multiple toolboxes, invalid configs
+- **Error Handling (US3)**: Invalid tool names, bad arguments, downstream failures, config reference errors
+- **CI Integration (US4)**: GitHub Actions workflow, automated testing on Node.js 18/20/22
 
 **Test Architecture:**
 - Uses Vitest as the test runner
 - Tests spawn workbench server via stdio transport
 - Uses real downstream MCP servers (@modelcontextprotocol/server-memory)
-- All tests complete in under 5 minutes (typically ~400ms)
+- 37 tests across 4 test files
+- All tests complete in under 5 minutes (typically ~3 seconds)
 - Pass/fail output only (no performance metrics)
+- Runs automatically on pull requests and pushes to main/develop
 
 ## Troubleshooting
 

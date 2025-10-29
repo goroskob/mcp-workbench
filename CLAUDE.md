@@ -411,7 +411,10 @@ e2e/
 │   ├── client-factory.ts  # MCP client wrapper
 │   └── assertions.ts      # Custom test assertions
 └── scenarios/
-    └── workflow-validation.e2e.ts  # Complete workflow tests
+    ├── workflow-validation.e2e.ts  # US1: Complete workflow tests
+    ├── configuration.e2e.ts        # US2: Configuration validation tests
+    ├── error-handling.e2e.ts       # US3: Error handling tests
+    └── ci-integration.e2e.ts       # US4: CI/CD integration tests
 ```
 
 **Core Components:**
@@ -499,9 +502,10 @@ describe('Feature Test', () => {
 
 - **Pass/fail output only** (no performance metrics per spec)
 - **Deterministic** (no flaky tests)
-- **Fast execution** (~400ms typical, < 5min max)
+- **Fast execution** (~3 seconds for all 37 tests, < 5min max)
 - **Cleanup failures abort run** (critical safety requirement)
 - **Sequential by default** (parallel execution requires proper isolation)
+- **CI/CD integrated** (runs on PRs and pushes to main/develop)
 
 ### Adding New Test Scenarios
 
