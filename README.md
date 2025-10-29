@@ -10,7 +10,7 @@ Instead of managing connections to multiple MCP servers manually, MCP Workbench 
 
 1. **Organize tools by domain** - Group related MCP servers into named toolboxes (e.g., "incident-analysis", "gitlab-workflow")
 2. **Dynamic discovery** - Open a toolbox to discover all available tools from its servers
-3. **Structured invocation** - Call tools using explicit `{ toolbox, server, tool }` identifiers via the `use_tool` meta-tool
+3. **Structured invocation** - Call tools using explicit `{ toolbox, server, name }` identifiers via the `use_tool` meta-tool
 4. **Automatic resource management** - Toolboxes remain open until server shutdown, with automatic cleanup of all connections
 
 ### Tool Identification
@@ -21,13 +21,13 @@ Tools are identified using structured objects with three components:
 {
   toolbox: "toolbox-name",    // Which toolbox contains this tool
   server: "server-name",      // Which MCP server provides this tool
-  tool: "tool-name"           // The tool's original name
+  name: "tool-name"           // The tool's original name
 }
 ```
 
 **Examples:**
-- Toolbox "dev", server "filesystem", tool "read_file"
-- Toolbox "prod", server "clickhouse", tool "query"
+- Toolbox "dev", server "filesystem", name "read_file"
+- Toolbox "prod", server "clickhouse", name "query"
 
 This structured approach allows multiple toolboxes to use the same MCP server without conflicts, and eliminates ambiguity with special characters in tool names.
 
@@ -441,7 +441,7 @@ Execute a tool from an opened toolbox using structured tool identifiers.
   "tool": {
     "toolbox": "incident-analysis",
     "server": "clickhouse",
-    "tool": "list_databases"
+    "name": "list_databases"
   },
   "arguments": {
     // tool-specific arguments
@@ -459,14 +459,14 @@ Execute a tool from an opened toolbox using structured tool identifiers.
 
 // 2. Open the toolbox you need
 open_toolbox({ toolbox: "data-analysis" })
-// Returns tool list with separate toolbox, server, name (tool) fields
+// Returns tool list with separate toolbox, server, name fields
 
 // 3. Use tools from the toolbox via use_tool with structured identifiers
 use_tool({
   tool: {
     toolbox: "data-analysis",
     server: "postgres",
-    tool: "query_database"
+    name: "query_database"
   },
   arguments: { query: "SELECT * FROM users LIMIT 10" }
 })
@@ -546,7 +546,7 @@ Organize tools by environment:
 │  │                              │   │
 │  │  Tool Invocation:            │   │
 │  │  Structured identifiers      │   │
-│  │  { toolbox, server, tool }   │   │
+│  │  { toolbox, server, name }   │   │
 │  └──────────────────────────────┘   │
 │  ┌──────────────────────────────┐   │
 │  │  Client Manager              │   │
