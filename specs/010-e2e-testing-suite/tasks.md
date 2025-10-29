@@ -143,7 +143,7 @@
 - [X] T046 [P] Verify test output is pass/fail only (per clarifications - no performance metrics)
 - [X] T047 [P] Verify cleanup failures abort test run (per FR-006 and clarifications)
 - [X] T048 [P] Verify tests are deterministic (no flaky tests per SC-007)
-- [ ] T049 Run quickstart.md validation (verify commands work as documented)
+- [X] T049 Run quickstart.md validation (verify commands work as documented)
 - [X] T050 Final review: Ensure documentation matches implementation
 
 ---

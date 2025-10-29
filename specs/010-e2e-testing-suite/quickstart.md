@@ -18,12 +18,12 @@
 npm run test:e2e
 
 # Expected output:
-# ✓ e2e/scenarios/workflow-validation.e2e.ts (5 tests)
-# ✓ e2e/scenarios/configuration.e2e.ts (4 tests)
-# ✓ e2e/scenarios/error-handling.e2e.ts (4 tests)
-# ✓ e2e/scenarios/ci-integration.e2e.ts (4 tests)
+# ✓ e2e/scenarios/workflow-validation.e2e.ts (9 tests)
+# ✓ e2e/scenarios/configuration.e2e.ts (10 tests)
+# ✓ e2e/scenarios/error-handling.e2e.ts (12 tests)
+# ✓ e2e/scenarios/ci-integration.e2e.ts (6 tests)
 #
-# Test Summary: 17 passed, 0 failed
+# Test Summary: 37 passed, 0 failed
 ```
 
 ### Run Specific Scenario
