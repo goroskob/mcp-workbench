@@ -85,11 +85,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T026 [US2] Create test file e2e/scenarios/configuration.e2e.ts with test suite structure
-- [ ] T027 [US2] Implement Test 2.1: Environment variable expansion test in configuration.e2e.ts
-- [ ] T028 [US2] Implement Test 2.2: Tool filters test in configuration.e2e.ts
-- [ ] T029 [US2] Implement Test 2.3: Multiple toolboxes test in configuration.e2e.ts
-- [ ] T030 [US2] Implement Test 2.4: Invalid configuration handling test in configuration.e2e.ts
+- [X] T026 [US2] Create test file e2e/scenarios/configuration.e2e.ts with test suite structure
+- [X] T027 [US2] Implement Test 2.1: Environment variable expansion test in configuration.e2e.ts
+- [X] T028 [US2] Implement Test 2.2: Tool filters test in configuration.e2e.ts
+- [X] T029 [US2] Implement Test 2.3: Multiple toolboxes test in configuration.e2e.ts
+- [X] T030 [US2] Implement Test 2.4: Invalid configuration handling test in configuration.e2e.ts
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -103,11 +103,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T031 [US3] Create test file e2e/scenarios/error-handling.e2e.ts with test suite structure
-- [ ] T032 [US3] Implement Test 3.1: Invalid tool name error test in error-handling.e2e.ts
-- [ ] T033 [US3] Implement Test 3.2: Invalid arguments error test in error-handling.e2e.ts
-- [ ] T034 [US3] Implement Test 3.3: Downstream server failure error test in error-handling.e2e.ts
-- [ ] T035 [US3] Implement Test 3.4: Configuration reference error test in error-handling.e2e.ts
+- [X] T031 [US3] Create test file e2e/scenarios/error-handling.e2e.ts with test suite structure
+- [X] T032 [US3] Implement Test 3.1: Invalid tool name error test in error-handling.e2e.ts
+- [X] T033 [US3] Implement Test 3.2: Invalid arguments error test in error-handling.e2e.ts
+- [X] T034 [US3] Implement Test 3.3: Downstream server failure error test in error-handling.e2e.ts
+- [X] T035 [US3] Implement Test 3.4: Configuration reference error test in error-handling.e2e.ts
 
 **Checkpoint**: All error handling scenarios should now be validated
 
@@ -121,11 +121,11 @@
 
 ### Implementation for User Story 4
 
-- [ ] T036 [US4] Create GitHub Actions workflow file .github/workflows/e2e-tests.yml
-- [ ] T037 [US4] Configure workflow triggers (pull_request, push to main) in e2e-tests.yml
-- [ ] T038 [US4] Add workflow steps (checkout, setup-node, install, build, test) in e2e-tests.yml
-- [ ] T039 [US4] Create test file e2e/scenarios/ci-integration.e2e.ts for CI-specific validation
-- [ ] T040 [US4] Implement Test 4.1: CI test execution validation in ci-integration.e2e.ts
+- [X] T036 [US4] Create GitHub Actions workflow file .github/workflows/e2e-tests.yml
+- [X] T037 [US4] Configure workflow triggers (pull_request, push to main) in e2e-tests.yml
+- [X] T038 [US4] Add workflow steps (checkout, setup-node, install, build, test) in e2e-tests.yml
+- [X] T039 [US4] Create test file e2e/scenarios/ci-integration.e2e.ts for CI-specific validation
+- [X] T040 [US4] Implement Test 4.1: CI test execution validation in ci-integration.e2e.ts
 - [ ] T041 [US4] Verify E2E tests appear as GitHub status checks on test PR
 
 **Checkpoint**: All user stories should now be independently functional with CI integration

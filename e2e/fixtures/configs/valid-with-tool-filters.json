@@ -6,7 +6,7 @@
         "memory": {
           "command": "npx",
           "args": ["-y", "@modelcontextprotocol/server-memory"],
-          "toolFilters": ["store_value", "get_value"]
+          "toolFilters": ["create_entities", "search_nodes"]
         }
       }
     }
