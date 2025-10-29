@@ -32,7 +32,7 @@ const ToolIdentifierSchema = z
   .object({
     toolbox: z.string().min(1, "Toolbox name cannot be empty"),
     server: z.string().min(1, "Server name cannot be empty"),
-    tool: z.string().min(1, "Tool name cannot be empty"),
+    name: z.string().min(1, "Tool name cannot be empty"),
   })
   .strict();
 
@@ -273,7 +273,7 @@ Error Handling:
         description: `Execute a tool from an opened toolbox using structured tool identifiers.
 
 How it works:
-1. Specify the tool using a structured identifier: { toolbox, server, tool }
+1. Specify the tool using a structured identifier: { toolbox, server, name }
 2. Provide the tool arguments as an object
 3. The workbench proxies the request to the appropriate downstream MCP server
 4. Returns the tool's response
@@ -282,7 +282,7 @@ Args:
   - tool: Structured tool identifier (required)
     - toolbox: Name of the opened toolbox (string, non-empty)
     - server: Name of the MCP server providing the tool (string, non-empty)
-    - tool: Name of the tool from the downstream server (string, non-empty)
+    - name: Name of the tool from the downstream server (string, non-empty)
   - arguments: Tool arguments as a JSON object (optional)
 
 Returns:
@@ -293,7 +293,7 @@ Example:
     "tool": {
       "toolbox": "dev",
       "server": "filesystem",
-      "tool": "read_file"
+      "name": "read_file"
     },
     "arguments": { "path": "/etc/hosts" }
   }
@@ -335,18 +335,18 @@ Error Handling:
         const params = validationResult.data;
         try {
           // Extract structured tool identifier
-          const { toolbox, server, tool } = params.tool;
+          const { toolbox, server, name } = params.tool;
 
           // Find the tool in the opened toolbox using structured lookup
           const { connection, tool: foundTool } = this.clientManager.findToolInToolbox(
             toolbox,
             server,
-            tool
+            name
           );
 
           // Delegate to the downstream server using original tool name
           const result = await connection.client.callTool({
-            name: tool,
+            name,
             arguments: params.arguments,
           });
 
@@ -356,7 +356,7 @@ Error Handling:
             content: [
               {
                 type: "text" as const,
-                text: `Error executing tool '${params.tool.tool}' in server '${params.tool.server}' (toolbox '${params.tool.toolbox}'): ${
+                text: `Error executing tool '${params.tool.name}' in server '${params.tool.server}' (toolbox '${params.tool.toolbox}'): ${
                   error instanceof Error ? error.message : String(error)
                 }`,
               },

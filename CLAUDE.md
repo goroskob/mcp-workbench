@@ -206,7 +206,7 @@ Tools are identified using structured objects with three required fields:
 {
   toolbox: string;  // Toolbox containing this tool
   server: string;   // MCP server providing this tool
-  tool: string;     // Original tool name
+  name: string;     // Original tool name
 }
 ```
 
@@ -214,7 +214,7 @@ Tools are identified using structured objects with three required fields:
 - Toolbox name: `dev`
 - Server name: `filesystem`
 - Original tool: `read_file`
-- Structured identifier: `{ toolbox: "dev", server: "filesystem", tool: "read_file" }`
+- Structured identifier: `{ toolbox: "dev", server: "filesystem", name: "read_file" }`
 
 **Benefits of Structured Format:**
 - Eliminates parsing ambiguity (no string splitting on `__`)
@@ -388,9 +388,9 @@ When `open_toolbox` is called:
 6. Toolbox remains open until server shutdown
 
 When `use_tool` is called:
-1. MCP client specifies structured tool identifier (`toolbox`, `server`, `tool`) and `arguments`
+1. MCP client specifies structured tool identifier (`toolbox`, `server`, `name`) and `arguments`
 2. Workbench finds the appropriate server connection and original tool name
-3. Delegates to downstream server: `client.callTool({ name: tool, arguments })`
+3. Delegates to downstream server: `client.callTool({ name, arguments })`
 4. Returns downstream response directly
 
 When server shuts down (SIGINT/SIGTERM):

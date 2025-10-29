@@ -1,18 +1,20 @@
 <!--
 Sync Impact Report:
-Version: 1.9.0 (Standardized naming)
+Version: 1.10.0 (MCP SDK naming alignment)
 Modified Principles:
-  - II. Tool Naming and Conflict Resolution - Updated field names from `toolbox_name`, `source_server`, `name` to `toolbox`, `server`, `tool` for consistency
+  - II. Tool Naming and Conflict Resolution - Updated tool identifier property from `tool` to `name` to align with MCP SDK Tool interface naming convention
+  - III. Proxy-Based Tool Invocation - Updated structured identifier format from `{ toolbox, server, tool }` to `{ toolbox, server, name }`
 Added Sections: N/A
 Removed Sections: N/A
 Templates Requiring Updates:
   ✅ plan-template.md - No changes needed (implementation-specific)
   ✅ spec-template.md - No changes needed (feature-specific changes)
   ✅ tasks-template.md - No changes needed (task structure unchanged)
-  ✅ README.md - Updated all examples with standardized names
-  ✅ CLAUDE.md - Updated type system docs and examples with standardized names
+  ✅ README.md - Updated all examples with new `name` property
+  ✅ CLAUDE.md - Updated type system docs and examples with new `name` property
 Follow-up TODOs: None - all updates completed
 Previous Versions:
+  - 1.9.0 (2025-10-28): Standardized naming
   - 1.8.0 (2025-10-28): Incubation stage policy
   - 1.7.0 (2025-10-28): Structured tool naming
   - 1.6.0 (2025-10-28): Remove dynamic mode, rename meta-tools
@@ -45,15 +47,15 @@ The MCP Workbench is a meta-MCP server that MUST act as both an MCP server (expo
 
 All downstream tools MUST be identified using structured objects with three required fields to prevent naming conflicts:
 
-- Tool identification MUST use structured format: `{ toolbox: string, server: string, tool: string }`
-- All three fields (toolbox, server, tool) are MANDATORY and MUST be non-empty strings
+- Tool identification MUST use structured format: `{ toolbox: string, server: string, name: string }`
+- All three fields (toolbox, server, name) are MANDATORY and MUST be non-empty strings
 - Tool identifiers MUST be deterministic and predictable from separate components
 - Original tool names MUST be preserved in metadata for delegation to downstream servers
-- Tool metadata MUST include separate `toolbox`, `server`, and `tool` fields
+- Tool metadata MUST include separate `toolbox`, `server`, and `name` fields
 
 **Examples**:
-- Toolbox "dev", server "filesystem", tool "read_file" → `{ toolbox: "dev", server: "filesystem", tool: "read_file" }`
-- Toolbox "prod", server "filesystem", tool "read_file" → `{ toolbox: "prod", server: "filesystem", tool: "read_file" }`
+- Toolbox "dev", server "filesystem", tool "read_file" → `{ toolbox: "dev", server: "filesystem", name: "read_file" }`
+- Toolbox "prod", server "filesystem", tool "read_file" → `{ toolbox: "prod", server: "filesystem", name: "read_file" }`
 
 **Rationale**: Structured three-level naming (toolbox + server + tool) prevents conflicts between duplicate MCP server instances across multiple toolboxes while maintaining clarity about tool provenance and eliminating string parsing ambiguity. This enables multiple toolboxes to use the same MCP server without naming collisions, supporting development/production isolation and multi-environment workflows. The structured format makes tool identification explicit and prevents issues with special characters in tool names.
 
@@ -62,8 +64,8 @@ All downstream tools MUST be identified using structured objects with three requ
 The workbench operates exclusively in proxy mode, where all tool invocation flows through the `use_tool` meta-tool:
 
 - Tools MUST be returned with full schemas via `open_toolbox` but NOT dynamically registered
-- Tool invocation MUST occur via the `use_tool` meta-tool with structured tool identifier: `{ tool: { toolbox, server, tool }, arguments }`
-- Tool metadata MUST use separate fields (`toolbox`, `server`, `tool`) not concatenated strings
+- Tool invocation MUST occur via the `use_tool` meta-tool with structured tool identifier: `{ tool: { toolbox, server, name }, arguments }`
+- Tool metadata MUST use separate fields (`toolbox`, `server`, `name`) not concatenated strings
 - All tool calls MUST delegate to downstream servers using original tool names from the structured identifier
 - Tool filters from configuration MUST be applied during toolbox opening
 
