@@ -388,6 +388,8 @@ Tools are identified using structured objects with `toolbox`, `server`, and `nam
 - @modelcontextprotocol/sdk ^1.6.1
 - zod ^3.23.8 for validation
 - In-memory state management (no persistent storage required)
+- TypeScript 5.7+, Node.js 18+ (matching existing workbench codebase) + Vitest (test runner), @modelcontextprotocol/sdk (MCP client/server), testcontainers-node (optional container isolation) (010-e2e-testing-suite)
+- N/A (tests use in-memory state and temporary configurations) (010-e2e-testing-suite)
 
 ## Recent Changes
 - 009-align-tool-identifier-name: Renamed `tool` property to `name` in structured tool identifiers to align with MCP SDK naming conventions
