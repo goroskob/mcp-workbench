@@ -126,7 +126,7 @@
 - [X] T038 [US4] Add workflow steps (checkout, setup-node, install, build, test) in e2e-tests.yml
 - [X] T039 [US4] Create test file e2e/scenarios/ci-integration.e2e.ts for CI-specific validation
 - [X] T040 [US4] Implement Test 4.1: CI test execution validation in ci-integration.e2e.ts
-- [ ] T041 [US4] Verify E2E tests appear as GitHub status checks on test PR
+- [X] T041 [US4] Verify E2E tests appear as GitHub status checks on test PR
 
 **Checkpoint**: All user stories should now be independently functional with CI integration
 
