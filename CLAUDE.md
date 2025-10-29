@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MCP Workbench is a **meta-MCP server** that aggregates tools from other MCP servers and organizes them into "toolboxes" for discovery and invocation. It acts as an orchestrator that connects to downstream MCP servers, providing two meta-tools (`open_toolbox` and `use_tool`) that enable tool discovery and invocation through a proxy pattern.
 
+**npm package**: [`mcp-workbench`](https://www.npmjs.com/package/mcp-workbench)
+
 ## Build and Development Commands
 
 ```bash
