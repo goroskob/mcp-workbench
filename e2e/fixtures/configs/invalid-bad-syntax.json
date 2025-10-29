@@ -1,0 +1,13 @@
+{
+  "toolboxes": {
+    "test": {
+      "description": "Invalid JSON syntax - missing closing brace",
+      "mcpServers": {
+        "memory": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-memory"]
+        }
+      }
+    }
+  }
+

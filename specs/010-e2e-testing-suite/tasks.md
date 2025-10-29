@@ -25,12 +25,12 @@
 
 **Purpose**: Project initialization and E2E test framework setup
 
-- [ ] T001 Install Vitest and E2E testing dependencies in package.json (vitest, @types/node)
-- [ ] T002 [P] Install downstream MCP server packages in package.json (@modelcontextprotocol/server-memory, @modelcontextprotocol/server-filesystem)
-- [ ] T003 Create E2E test configuration file vitest.config.e2e.ts at repository root
-- [ ] T004 [P] Add E2E test scripts to package.json (test:e2e, test:e2e:watch)
-- [ ] T005 Create E2E directory structure (e2e/fixtures/, e2e/helpers/, e2e/scenarios/)
-- [ ] T006 [P] Create TypeScript type definitions file e2e/helpers/types.ts for test entities
+- [X] T001 Install Vitest and E2E testing dependencies in package.json (vitest, @types/node)
+- [X] T002 [P] Install downstream MCP server packages in package.json (@modelcontextprotocol/server-memory, @modelcontextprotocol/server-filesystem)
+- [X] T003 Create E2E test configuration file vitest.config.e2e.ts at repository root
+- [X] T004 [P] Add E2E test scripts to package.json (test:e2e, test:e2e:watch)
+- [X] T005 Create E2E directory structure (e2e/fixtures/, e2e/helpers/, e2e/scenarios/)
+- [X] T006 [P] Create TypeScript type definitions file e2e/helpers/types.ts for test entities
 
 ---
 
@@ -40,19 +40,19 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T007 Implement port allocation helper in e2e/helpers/isolation.ts (allocatePort function)
-- [ ] T008 Implement server manager in e2e/helpers/server-manager.ts (startServer, stopServer functions)
-- [ ] T009 Implement MCP client factory in e2e/helpers/client-factory.ts (createMCPClient function)
-- [ ] T010 [P] Implement MCPTestClient wrapper class in e2e/helpers/client-factory.ts (openToolbox, useTool, disconnect methods)
-- [ ] T011 [P] Create custom Vitest assertions in e2e/helpers/assertions.ts (toHaveToolInToolbox, toMatchToolSchema, toReturnErrorWithContext)
-- [ ] T012 [P] Create test fixture: valid-single-toolbox.json in e2e/fixtures/configs/
-- [ ] T013 [P] Create test fixture: valid-multiple-toolboxes.json in e2e/fixtures/configs/
-- [ ] T014 [P] Create test fixture: valid-with-env-vars.json in e2e/fixtures/configs/
-- [ ] T015 [P] Create test fixture: valid-with-tool-filters.json in e2e/fixtures/configs/
-- [ ] T016 [P] Create test fixture: invalid-missing-server.json in e2e/fixtures/configs/
-- [ ] T017 [P] Create test fixture: invalid-bad-syntax.json in e2e/fixtures/configs/
-- [ ] T018 [P] Create downstream server setup helpers in e2e/fixtures/downstream-servers/test-server-setup.ts
-- [ ] T019 [P] Create expected tool schemas in e2e/fixtures/expected-responses/tool-schemas.ts
+- [X] T007 Implement port allocation helper in e2e/helpers/isolation.ts (allocatePort function)
+- [X] T008 Implement server manager in e2e/helpers/server-manager.ts (startServer, stopServer functions)
+- [X] T009 Implement MCP client factory in e2e/helpers/client-factory.ts (createMCPClient function)
+- [X] T010 [P] Implement MCPTestClient wrapper class in e2e/helpers/client-factory.ts (openToolbox, useTool, disconnect methods)
+- [X] T011 [P] Create custom Vitest assertions in e2e/helpers/assertions.ts (toHaveToolInToolbox, toMatchToolSchema, toReturnErrorWithContext)
+- [X] T012 [P] Create test fixture: valid-single-toolbox.json in e2e/fixtures/configs/
+- [X] T013 [P] Create test fixture: valid-multiple-toolboxes.json in e2e/fixtures/configs/
+- [X] T014 [P] Create test fixture: valid-with-env-vars.json in e2e/fixtures/configs/
+- [X] T015 [P] Create test fixture: valid-with-tool-filters.json in e2e/fixtures/configs/
+- [X] T016 [P] Create test fixture: invalid-missing-server.json in e2e/fixtures/configs/
+- [X] T017 [P] Create test fixture: invalid-bad-syntax.json in e2e/fixtures/configs/
+- [X] T018 [P] Create downstream server setup helpers in e2e/fixtures/downstream-servers/test-server-setup.ts
+- [X] T019 [P] Create expected tool schemas in e2e/fixtures/expected-responses/tool-schemas.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 

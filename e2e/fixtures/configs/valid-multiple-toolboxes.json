@@ -1,0 +1,22 @@
+{
+  "toolboxes": {
+    "memory-tools": {
+      "description": "Memory-based toolbox",
+      "mcpServers": {
+        "memory": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-memory"]
+        }
+      }
+    },
+    "filesystem-tools": {
+      "description": "Filesystem-based toolbox",
+      "mcpServers": {
+        "filesystem": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+        }
+      }
+    }
+  }
+}
