@@ -14,35 +14,25 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 1. Run `.specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` from repo root and parse FEATURE_DIR and AVAILABLE_DOCS list. All paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
-2. **Check checklists status** (if FEATURE_DIR/checklists/ exists):
-   - Scan all checklist files in the checklists/ directory
-   - For each checklist, count:
-     - Total items: All lines matching `- [ ]` or `- [X]` or `- [x]`
-     - Completed items: Lines matching `- [X]` or `- [x]`
-     - Incomplete items: Lines matching `- [ ]`
-   - Create a status table:
+2. **Check checklists status**:
+   - Extract the spec name from FEATURE_DIR (e.g., `/path/to/specs/010-e2e-testing-suite` → `010-e2e-testing-suite`)
+   - Run `.specify/scripts/bash/check-checklists.sh <spec-name>` from repo root
+   - Display the script's output (formatted table)
 
-     ```text
-     | Checklist | Total | Completed | Incomplete | Status |
-     |-----------|-------|-----------|------------|--------|
-     | ux.md     | 12    | 12        | 0          | ✓ PASS |
-     | test.md   | 8     | 5         | 3          | ✗ FAIL |
-     | security.md | 6   | 6         | 0          | ✓ PASS |
-     ```
+   **Parse output to determine status:**
+   - If output contains "NO_CHECKLISTS": No checklists exist, proceed to step 3
+   - If table shows any checklist with "✗ FAIL": Checklists incomplete
+   - If all checklists show "✓ PASS": All checklists complete
 
-   - Calculate overall status:
-     - **PASS**: All checklists have 0 incomplete items
-     - **FAIL**: One or more checklists have incomplete items
-
-   - **If any checklist is incomplete**:
+   **If any checklist is incomplete:**
      - Display the table with incomplete item counts
      - **STOP** and ask: "Some checklists are incomplete. Do you want to proceed with implementation anyway? (yes/no)"
      - Wait for user response before continuing
      - If user says "no" or "wait" or "stop", halt execution
      - If user says "yes" or "proceed" or "continue", proceed to step 3
 
-   - **If all checklists are complete**:
-     - Display the table showing all checklists passed
+   **If all checklists are complete (or none exist):**
+     - Display the table if checklists exist
      - Automatically proceed to step 3
 
 3. Load and analyze the implementation context:

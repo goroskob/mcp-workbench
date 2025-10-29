@@ -34,4 +34,6 @@ coverage/
 .serena/
 
 # Claude Code
-.claude/
+.claude/*
+!.claude/commands/
+!.claude/commands/*.md
