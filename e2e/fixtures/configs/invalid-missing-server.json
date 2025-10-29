@@ -1,0 +1,13 @@
+{
+  "toolboxes": {
+    "test": {
+      "description": "Test toolbox with non-existent server",
+      "mcpServers": {
+        "nonexistent": {
+          "command": "nonexistent-command-that-does-not-exist",
+          "args": ["--some-arg"]
+        }
+      }
+    }
+  }
+}

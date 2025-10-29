@@ -1,0 +1,13 @@
+{
+  "toolboxes": {
+    "test": {
+      "description": "Test toolbox with memory server",
+      "mcpServers": {
+        "memory": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-memory"]
+        }
+      }
+    }
+  }
+}

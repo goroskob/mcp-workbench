@@ -1,13 +1,12 @@
 {
   "toolboxes": {
-    "memory-test": {
-      "description": "Simple test toolbox using the memory MCP server",
+    "test": {
+      "description": "Test toolbox with tool filters",
       "mcpServers": {
         "memory": {
           "command": "npx",
           "args": ["-y", "@modelcontextprotocol/server-memory"],
-          "toolFilters": ["*"],
-          "transport": "stdio"
+          "toolFilters": ["create_entities", "search_nodes"]
         }
       }
     }

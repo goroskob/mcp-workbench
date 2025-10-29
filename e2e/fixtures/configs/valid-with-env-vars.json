@@ -1,0 +1,17 @@
+{
+  "toolboxes": {
+    "test": {
+      "description": "Test toolbox with environment variables",
+      "mcpServers": {
+        "memory": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-memory"],
+          "env": {
+            "LOG_LEVEL": "${E2E_LOG_LEVEL:-info}",
+            "TEST_VAR": "${E2E_TEST_VAR}"
+          }
+        }
+      }
+    }
+  }
+}
