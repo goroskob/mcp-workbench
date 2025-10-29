@@ -582,6 +582,34 @@ npm run build
 npm run clean
 ```
 
+### End-to-End Testing
+
+The project includes comprehensive E2E tests that validate the complete workbench workflow from configuration loading through tool execution and cleanup.
+
+**Running E2E Tests:**
+
+```bash
+# Run all E2E tests
+npm run test:e2e
+
+# Run E2E tests in watch mode
+npm run test:e2e:watch
+```
+
+**What's Tested:**
+- Complete workflow validation (initialization → open toolbox → execute tools → cleanup)
+- Server startup and MCP client connection
+- Toolbox opening and tool discovery
+- Tool execution via `use_tool` meta-tool
+- Proper connection cleanup and resource management
+
+**Test Architecture:**
+- Uses Vitest as the test runner
+- Tests spawn workbench server via stdio transport
+- Uses real downstream MCP servers (@modelcontextprotocol/server-memory)
+- All tests complete in under 5 minutes (typically ~400ms)
+- Pass/fail output only (no performance metrics)
+
 ## Troubleshooting
 
 ### "Failed to connect to MCP server"

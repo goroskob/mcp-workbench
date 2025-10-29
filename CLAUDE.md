@@ -388,8 +388,127 @@ Tools are identified using structured objects with `toolbox`, `server`, and `nam
 - @modelcontextprotocol/sdk ^1.6.1
 - zod ^3.23.8 for validation
 - In-memory state management (no persistent storage required)
-- TypeScript 5.7+, Node.js 18+ (matching existing workbench codebase) + Vitest (test runner), @modelcontextprotocol/sdk (MCP client/server), testcontainers-node (optional container isolation) (010-e2e-testing-suite)
-- N/A (tests use in-memory state and temporary configurations) (010-e2e-testing-suite)
+- Vitest 2.1.8 for E2E testing
+
+## End-to-End Testing Architecture
+
+### Overview
+The E2E test suite validates the complete workbench workflow using real MCP servers and the stdio transport protocol. Tests are located in `e2e/` at repository root.
+
+### Test Infrastructure
+
+**Directory Structure:**
+```
+e2e/
+├── fixtures/
+│   ├── configs/           # Test configuration files
+│   ├── downstream-servers/ # Helper functions for test servers
+│   └── expected-responses/ # Expected tool schemas
+├── helpers/
+│   ├── types.ts           # TypeScript type definitions
+│   ├── isolation.ts       # Port allocation for parallel tests
+│   ├── server-manager.ts  # Temp config file management
+│   ├── client-factory.ts  # MCP client wrapper
+│   └── assertions.ts      # Custom test assertions
+└── scenarios/
+    └── workflow-validation.e2e.ts  # Complete workflow tests
+```
+
+**Core Components:**
+
+1. **MCPTestClientWrapper** (`e2e/helpers/client-factory.ts`):
+   - Spawns workbench server via stdio transport
+   - Manages client connection lifecycle
+   - Provides `openToolbox()` and `useTool()` methods
+   - Automatically tracks opened toolboxes
+
+2. **Stdio Transport Pattern**:
+   - Tests spawn workbench process using `StdioClientTransport`
+   - No separate server process needed
+   - Connection lifecycle: `connect()` spawns process, `disconnect()` terminates it
+   - Environment variables passed via transport config
+
+3. **Test Isolation**:
+   - Uses temporary configuration files (created in `tmpdir()`)
+   - Each test suite gets unique config file
+   - Port allocation helpers available but not needed for stdio
+   - Cleanup failures abort test run (per spec requirements)
+
+### Running Tests
+
+```bash
+# Run all E2E tests
+npm run test:e2e
+
+# Watch mode
+npm run test:e2e:watch
+
+# Configuration
+vitest.config.e2e.ts
+```
+
+### Test Patterns
+
+**Basic Test Structure:**
+```typescript
+describe('Feature Test', () => {
+  let client: MCPTestClientWrapper;
+  let configPath: string;
+
+  beforeAll(async () => {
+    // Create temp config
+    const config = getMemoryServerConfig();
+    configPath = createTempConfig(config, 'test-name');
+
+    // Connect client (spawns server)
+    client = new MCPTestClientWrapper();
+    await client.connect(configPath);
+  });
+
+  afterAll(async () => {
+    // Cleanup (terminates server)
+    await client.disconnect();
+    deleteTempConfig(configPath);
+  });
+
+  it('should execute workflow', async () => {
+    const tools = await client.openToolbox('test');
+    const result = await client.useTool(
+      { toolbox: 'test', server: 'memory', name: 'tool_name' },
+      { /* args */ }
+    );
+    expect(result).toBeDefined();
+  });
+});
+```
+
+### Downstream Test Servers
+
+**Currently Used:**
+- `@modelcontextprotocol/server-memory` (Knowledge Graph MCP Server)
+  - Tools: create_entities, create_relations, search_nodes, etc.
+  - Used for workflow validation tests
+  - Spawned as downstream server by workbench
+
+**Adding New Test Servers:**
+1. Add to `package.json` devDependencies
+2. Create helper in `e2e/fixtures/downstream-servers/`
+3. Add expected schemas in `e2e/fixtures/expected-responses/`
+
+### Test Execution Characteristics
+
+- **Pass/fail output only** (no performance metrics per spec)
+- **Deterministic** (no flaky tests)
+- **Fast execution** (~400ms typical, < 5min max)
+- **Cleanup failures abort run** (critical safety requirement)
+- **Sequential by default** (parallel execution requires proper isolation)
+
+### Adding New Test Scenarios
+
+1. Create test file in `e2e/scenarios/`
+2. Use standard test structure (see above)
+3. Add to `vitest.config.e2e.ts` if needed
+4. Document in `specs/010-e2e-testing-suite/`
 
 ## Recent Changes
 - 009-align-tool-identifier-name: Renamed `tool` property to `name` in structured tool identifiers to align with MCP SDK naming conventions
