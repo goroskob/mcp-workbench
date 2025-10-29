@@ -10,12 +10,14 @@ import type { MCPTestClient, ToolIdentifier, ToolInfo } from './types.js';
 /**
  * Create an MCP test client connected to a workbench server
  *
- * @param serverPort - Port where workbench server is listening
+ * @param configPath - Path to workbench configuration file
+ * @param env - Optional environment variables
  * @returns Promise<MCPTestClient> - Connected MCP client wrapper
  * @throws Error if connection fails
  */
 export async function createMCPClient(
-  serverPort: number
+  configPath: string,
+  env: Record<string, string> = {}
 ): Promise<MCPTestClient> {
   // Create MCP client
   const client = new Client(
@@ -28,17 +30,18 @@ export async function createMCPClient(
     }
   );
 
-  // Create stdio transport connected to workbench server
+  // Create stdio transport that spawns the workbench server
   const transport = new StdioClientTransport({
     command: 'node',
     args: ['dist/index.js'],
     env: {
       ...process.env,
-      PORT: serverPort.toString(),
+      ...env,
+      WORKBENCH_CONFIG: configPath,
     },
   });
 
-  // Connect client
+  // Connect client (this spawns the server process)
   await client.connect(transport);
 
   return {
@@ -177,8 +180,8 @@ export class MCPTestClientWrapper {
   /**
    * Connect to workbench server
    */
-  async connect(serverPort: number): Promise<void> {
-    this.mcpClient = await createMCPClient(serverPort);
+  async connect(configPath: string, env: Record<string, string> = {}): Promise<void> {
+    this.mcpClient = await createMCPClient(configPath, env);
   }
 
   /**
