@@ -1,19 +1,25 @@
 <!--
 Sync Impact Report:
-Version: 1.10.0 (MCP SDK naming alignment)
+Version: 1.11.0 (Documentation synchronization enforcement)
 Modified Principles:
-  - II. Tool Naming and Conflict Resolution - Updated tool identifier property from `tool` to `name` to align with MCP SDK Tool interface naming convention
-  - III. Proxy-Based Tool Invocation - Updated structured identifier format from `{ toolbox, server, tool }` to `{ toolbox, server, name }`
-Added Sections: N/A
-Removed Sections: N/A
+  - Elevated "Mandatory Documentation Updates" from Quality Standards subsection to Core Principle VIII
+  - Expanded enforcement to cover implementation workflow (speckit.implement)
+  - Added explicit phase gates requiring documentation validation before completion
+Added Sections:
+  - Core Principle VIII: Documentation Synchronization - Mandates thorough doc updates during implementation
+  - Implementation phase gates for README.md and CLAUDE.md validation
+Removed Sections:
+  - Quality Standards > Documentation Standards > Mandatory Documentation Updates (elevated to Core Principle)
 Templates Requiring Updates:
-  ✅ plan-template.md - No changes needed (implementation-specific)
-  ✅ spec-template.md - No changes needed (feature-specific changes)
-  ✅ tasks-template.md - No changes needed (task structure unchanged)
-  ✅ README.md - Updated all examples with new `name` property
-  ✅ CLAUDE.md - Updated type system docs and examples with new `name` property
-Follow-up TODOs: None - all updates completed
+  ✅ plan-template.md - Already includes structure documentation requirements
+  ✅ spec-template.md - Already requires user scenarios and requirements
+  ✅ tasks-template.md - Will be enforced via implementation workflow (speckit.implement)
+  ⚠ speckit.implement.md command - Needs documentation validation phase before completion
+Follow-up TODOs:
+  - Update speckit.implement command to enforce documentation validation phase
+  - Add checklist item for README.md and CLAUDE.md updates
 Previous Versions:
+  - 1.10.0 (2025-10-29): MCP SDK naming alignment
   - 1.9.0 (2025-10-28): Standardized naming
   - 1.8.0 (2025-10-28): Incubation stage policy
   - 1.7.0 (2025-10-28): Structured tool naming
@@ -194,6 +200,77 @@ Before graduating from incubation, the following MUST be stable and well-tested:
 
 **Rationale**: Explicit incubation policy sets clear expectations for users and maintainers. Pre-1.0 versions signal the project is still finding its optimal design and breaking changes are normal. This enables exploring different approaches (like the structured tool naming migration) without being locked into suboptimal patterns. Graduation to 1.0.0 becomes a meaningful milestone signaling production-readiness and stability commitment. Fast iteration during incubation accelerates learning and improvement without legacy burden.
 
+### VIII. Documentation Synchronization
+
+All implementation work MUST include thorough documentation updates to prevent documentation drift and maintain accuracy for both end users and contributors:
+
+**Mandatory Documentation Files:**
+- **README.md**: User-facing documentation (installation, configuration, usage examples)
+- **CLAUDE.md**: Developer/contributor documentation (architecture, patterns, development workflow)
+
+**Documentation Update Triggers:**
+
+The following changes MUST trigger corresponding documentation updates before implementation completion:
+
+**README.md MUST be updated when:**
+- New meta-tools are added or removed
+- Configuration schema changes (new fields, changed defaults, deprecated options)
+- New installation methods or requirements are introduced
+- Usage examples or workflows change
+- New toolbox concepts or invocation patterns are added
+- Breaking changes affect end users
+- Feature additions change how users interact with the system
+
+**CLAUDE.md MUST be updated when:**
+- Core architecture changes occur (meta-server pattern, connection management)
+- Tool registration or delegation logic changes
+- New or modified design patterns are introduced
+- Code organization changes (new files, moved responsibilities)
+- Build or release workflow changes
+- Type system changes affect development
+- Development workflow or commands change
+- Testing approach or philosophy changes
+
+**Both README.md AND CLAUDE.md MUST be updated when:**
+- Core principles are added, removed, or redefined
+- Tool naming convention changes
+- Invocation mode behavior changes
+- Error handling strategies change
+- Configuration format changes
+- Major architectural refactoring occurs
+
+**Implementation Workflow Enforcement:**
+
+Documentation updates MUST be enforced during the implementation phase (speckit.implement workflow):
+
+1. **Phase Gate Before Completion**:
+   - After all implementation tasks complete, a mandatory documentation validation phase MUST run
+   - Implementation MUST NOT be considered complete until documentation is verified
+
+2. **Documentation Validation Phase**:
+   - Review README.md for accuracy against implemented changes
+   - Review CLAUDE.md for architecture/workflow consistency
+   - Identify any documentation drift or missing updates
+   - Update both files to reflect current implementation
+   - Verify examples, code snippets, and diagrams match reality
+
+3. **Completion Criteria**:
+   - All code implementation tasks completed ✓
+   - README.md updated and accurate ✓
+   - CLAUDE.md updated and accurate ✓
+   - Documentation examples verified ✓
+   - No placeholder content remaining ✓
+
+**Documentation Quality Requirements:**
+- Examples MUST use actual code/configuration from the repository
+- Usage instructions MUST be tested and verified to work
+- Architecture descriptions MUST match current implementation
+- Outdated information MUST be removed or marked as deprecated
+- File paths and line numbers in examples MUST be current
+- No placeholder text (e.g., "[TODO]", "[UPDATE THIS]") allowed in main branch
+
+**Rationale**: Documentation drift is a primary source of confusion, maintenance burden, and user frustration. Synchronizing documentation with implementation ensures README.md serves end users accurately while CLAUDE.md guides contributors effectively. Both documents are primary entry points for their respective audiences and MUST reflect current reality. Enforcing updates at implementation completion time prevents documentation debt from accumulating and makes updates part of the definition of "done" rather than an afterthought.
+
 ## Quality Standards
 
 ### TypeScript Type Safety
@@ -209,34 +286,6 @@ Before graduating from incubation, the following MUST be stable and well-tested:
 - CLAUDE.md MUST contain architecture overview and development guidance
 - Tool descriptions MUST be clear, concise, and include example usage
 - Configuration schema MUST be documented with all fields explained
-
-### Mandatory Documentation Updates
-
-The following changes MUST trigger corresponding documentation updates before merge:
-
-**README.md update triggers:**
-- New meta-tools added or removed
-- Configuration schema changes (new fields, changed defaults, deprecated options)
-- New installation methods or requirements
-- Changes to usage examples or workflows
-- New toolbox concepts or invocation patterns
-- Breaking changes affecting end users
-
-**CLAUDE.md update triggers:**
-- Core architecture changes (meta-server pattern, connection management)
-- Changes to tool registration or delegation logic
-- New or modified design patterns
-- Code organization changes (new files, moved responsibilities)
-- Build or release workflow changes
-- Type system changes affecting development
-
-**Both documents MUST be updated when:**
-- Core principles are added, removed, or redefined
-- Tool naming convention changes
-- Invocation mode behavior changes
-- Error handling strategies change
-
-**Rationale**: Documentation drift causes confusion and maintenance burden. Mandating synchronous updates ensures README.md serves end users accurately while CLAUDE.md guides contributors effectively. Both documents are primary entry points for their respective audiences and MUST reflect current implementation.
 
 ### Testing Philosophy
 
@@ -286,7 +335,7 @@ The following changes MUST trigger corresponding documentation updates before me
 ### Compliance Requirements
 
 - All PRs MUST verify adherence to core principles
-- All PRs MUST include documentation updates if any mandatory triggers apply
+- All PRs MUST include documentation updates if any mandatory triggers apply (Core Principle VIII)
 - Code reviews MUST check for principle violations and documentation completeness
 - Complexity that violates principles MUST be explicitly justified
 - Use CLAUDE.md for runtime development guidance and architecture decisions
@@ -301,4 +350,4 @@ When constitution is updated:
 5. Update CLAUDE.md if architectural principles change
 6. Update README.md if user-facing guidance changes
 
-**Version**: 1.9.0 | **Ratified**: 2025-10-24 | **Last Amended**: 2025-10-28
+**Version**: 1.11.0 | **Ratified**: 2025-10-24 | **Last Amended**: 2025-10-29
