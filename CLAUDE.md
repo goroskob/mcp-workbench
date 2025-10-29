@@ -343,16 +343,32 @@ When server shuts down (SIGINT/SIGTERM):
 
 ## Testing Approach
 
-Use `workbench-config.test.json` with simple MCP servers:
+The project includes a comprehensive automated E2E test suite built with Vitest:
 
 ```bash
-export WORKBENCH_CONFIG=./workbench-config.test.json
-npm start
+# Run all E2E tests (37 tests across 4 scenarios)
+npm run test:e2e
+
+# Run specific scenario
+npm run test:e2e -- workflow-validation
+
+# Watch mode for development
+npm run test:e2e:watch
 ```
 
-Recommended test servers (no auth required):
-- `@modelcontextprotocol/server-memory` - Simple key-value storage
-- `@modelcontextprotocol/server-filesystem` - File operations
+**Test Coverage:**
+- **Workflow Validation** (9 tests): Complete workflow from initialization to cleanup
+- **Configuration Validation** (10 tests): Env vars, tool filters, multiple toolboxes, invalid configs
+- **Error Handling** (12 tests): Invalid tools, bad arguments, server failures, config errors
+- **CI Integration** (6 tests): GitHub Actions compatibility and performance validation
+
+**Test Architecture:**
+- Real integration tests using `@modelcontextprotocol/server-memory`
+- Stdio transport for authentic production-like testing
+- Fast execution (~3.5 seconds for full suite)
+- Automated via GitHub Actions on all PRs
+
+See [e2e/](e2e/) directory for test implementation and [specs/010-e2e-testing-suite/quickstart.md](specs/010-e2e-testing-suite/quickstart.md) for detailed testing guide.
 
 ## Common Modifications
 
